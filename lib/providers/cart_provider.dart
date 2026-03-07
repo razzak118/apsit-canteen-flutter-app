@@ -17,29 +17,39 @@ class CartNotifier extends AsyncNotifier<CartDto> {
   Future<void> addToCart(int itemId) async {
     final previous = state;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => ref.read(cartServiceProvider).addToCart(itemId));
-    if (state.hasError) {
+    final nextState = await AsyncValue.guard(
+      () => ref.read(cartServiceProvider).addToCart(itemId),
+    );
+    state = nextState;
+    if (nextState.hasError) {
       state = previous;
+      throw nextState.error!;
     }
   }
 
   Future<void> removeFromCart(int itemId) async {
     final previous = state;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => ref.read(cartServiceProvider).removeFromCart(itemId));
-    if (state.hasError) {
+    final nextState = await AsyncValue.guard(
+      () => ref.read(cartServiceProvider).removeFromCart(itemId),
+    );
+    state = nextState;
+    if (nextState.hasError) {
       state = previous;
+      throw nextState.error!;
     }
   }
 
   Future<void> deleteItemFromCart(int itemId) async {
     final previous = state;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
+    final nextState = await AsyncValue.guard(
       () => ref.read(cartServiceProvider).deleteItemFromCart(itemId),
     );
-    if (state.hasError) {
+    state = nextState;
+    if (nextState.hasError) {
       state = previous;
+      throw nextState.error!;
     }
   }
 }

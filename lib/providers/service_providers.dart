@@ -6,27 +6,55 @@ import '../services/item_service.dart';
 import '../services/order_service.dart';
 import '../services/token_storage_service.dart';
 import '../services/user_service.dart';
+import 'auth_session_provider.dart';
 
 final tokenStorageServiceProvider = Provider<TokenStorageService>((ref) {
   return TokenStorageService();
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(tokenStorage: ref.read(tokenStorageServiceProvider));
+  return AuthService(
+    tokenStorage: ref.read(tokenStorageServiceProvider),
+    onUnauthorized: () async {
+      // Clear auth data first, then invalidate the auth session
+      await ref.read(tokenStorageServiceProvider).clearAuth();
+      ref.invalidate(authSessionProvider);
+    },
+  );
 });
 
 final itemServiceProvider = Provider<ItemService>((ref) {
-  return ItemService();
+  return ItemService(
+    onUnauthorized: () async {
+      await ref.read(tokenStorageServiceProvider).clearAuth();
+      ref.invalidate(authSessionProvider);
+    },
+  );
 });
 
 final cartServiceProvider = Provider<CartService>((ref) {
-  return CartService();
+  return CartService(
+    onUnauthorized: () async {
+      await ref.read(tokenStorageServiceProvider).clearAuth();
+      ref.invalidate(authSessionProvider);
+    },
+  );
 });
 
 final orderServiceProvider = Provider<OrderService>((ref) {
-  return OrderService();
+  return OrderService(
+    onUnauthorized: () async {
+      await ref.read(tokenStorageServiceProvider).clearAuth();
+      ref.invalidate(authSessionProvider);
+    },
+  );
 });
 
 final userServiceProvider = Provider<UserService>((ref) {
-  return UserService();
+  return UserService(
+    onUnauthorized: () async {
+      await ref.read(tokenStorageServiceProvider).clearAuth();
+      ref.invalidate(authSessionProvider);
+    },
+  );
 });

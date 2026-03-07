@@ -82,9 +82,15 @@ class ItemCard extends StatelessWidget {
                               color: const Color(0xFF0F172A),
                             ),
                       ),
-                      FilledButton.tonal(
+                      FilledButton.tonalIcon(
                         onPressed: item.isAvailable ? onAdd : null,
-                        child: const Text('Add'),
+                        icon: Icon(
+                          item.isAvailable
+                              ? Icons.add_shopping_cart_rounded
+                              : Icons.inventory_2_outlined,
+                          size: 18,
+                        ),
+                        label: Text(item.isAvailable ? 'Add to Cart' : 'Out of Stock'),
                       ),
                     ],
                   ),

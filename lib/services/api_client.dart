@@ -18,9 +18,13 @@ class ApiException implements Exception {
 class ApiClient {
   final http.Client _http;
   final TokenStorageService _tokenStorage;
+  final Future<void> Function()? onUnauthorized;
 
-  ApiClient({http.Client? httpClient, TokenStorageService? tokenStorage})
-      : _http = httpClient ?? http.Client(),
+  ApiClient({
+    http.Client? httpClient,
+    TokenStorageService? tokenStorage,
+    this.onUnauthorized,
+  })  : _http = httpClient ?? http.Client(),
         _tokenStorage = tokenStorage ?? TokenStorageService();
 
   Future<dynamic> get(String path, {bool authRequired = true}) {
@@ -66,7 +70,7 @@ class ApiClient {
       throw const ApiException('Unsupported HTTP method');
     }
 
-    return _decodeResponse(response);
+    return await _decodeResponse(response);
   }
 
   Future<Map<String, String>> _buildHeaders({required bool authRequired}) async {
@@ -86,7 +90,7 @@ class ApiClient {
     return headers;
   }
 
-  dynamic _decodeResponse(http.Response response) {
+  Future<dynamic> _decodeResponse(http.Response response) async {
     final status = response.statusCode;
     final body = response.body;
 
@@ -95,6 +99,13 @@ class ApiClient {
         return null;
       }
       return jsonDecode(body);
+    }
+
+    // Handle unauthorized (JWT expired or invalid)
+    if (status == 401) {
+      await onUnauthorized?.call();
+      // Throw a gentle error that won't be shown to user since they'll be redirected
+      throw const ApiException('Session expired. Please login again.', statusCode: 401);
     }
 
     String message = 'Request failed with status $status';

@@ -12,12 +12,13 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemsAsync = ref.watch(allItemsProvider);
+    final selectedCategory = ref.watch(selectedCategoryProvider);
+    final itemsAsync = ref.watch(filteredItemsProvider);
 
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(allItemsProvider);
+          ref.invalidate(filteredItemsProvider);
           ref.invalidate(instantReadyItemsProvider);
         },
         child: ListView(
@@ -38,10 +39,18 @@ class HomeScreen extends ConsumerWidget {
                   ),
             ),
             const SizedBox(height: 16),
-            const PromoBannerCarousel(),
+            PromoBannerCarousel(
+              selectedCategory: selectedCategory,
+              onCategorySelected: (category) {
+                ref.read(selectedCategoryProvider.notifier).state = category;
+                ref.invalidate(filteredItemsProvider);
+              },
+            ),
             const SizedBox(height: 20),
             Text(
-              'Popular Today',
+              selectedCategory == null
+                  ? 'Popular Today'
+                  : '${selectedCategory[0]}${selectedCategory.substring(1).toLowerCase()} Items',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -84,11 +93,27 @@ class HomeScreen extends ConsumerWidget {
                           );
                         },
                         onAdd: () async {
-                          await ref.read(cartProvider.notifier).addToCart(item.itemId);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('${item.itemName} added to cart')),
-                            );
+                          try {
+                            await ref.read(cartProvider.notifier).addToCart(item.itemId);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${item.itemName} added to cart'),
+                                  backgroundColor: Colors.green,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to add to cart: $e'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
                           }
                         },
                       ),

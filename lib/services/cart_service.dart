@@ -4,7 +4,8 @@ import 'api_client.dart';
 class CartService {
   final ApiClient _apiClient;
 
-  CartService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  CartService({ApiClient? apiClient, Future<void> Function()? onUnauthorized})
+      : _apiClient = apiClient ?? ApiClient(onUnauthorized: onUnauthorized);
 
   Future<CartDto> getMyCart() async {
     final json = await _apiClient.get('/cart/my-cart');

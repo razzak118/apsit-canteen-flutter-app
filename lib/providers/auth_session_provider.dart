@@ -44,6 +44,12 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
     await ref.read(authServiceProvider).logout();
     state = const AsyncData(false);
   }
+
+  /// Called when JWT token expires or becomes invalid
+  Future<void> handleTokenExpiration() async {
+    await ref.read(tokenStorageServiceProvider).clearAuth();
+    state = const AsyncData(false);
+  }
 }
 
 final authSessionProvider = AsyncNotifierProvider<AuthSessionNotifier, bool>(

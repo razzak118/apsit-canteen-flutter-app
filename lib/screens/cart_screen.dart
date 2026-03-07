@@ -61,9 +61,20 @@ class CartScreen extends ConsumerWidget {
                                 ),
                                 IconButton(
                                   onPressed: () async {
-                                    await ref
-                                        .read(cartProvider.notifier)
-                                        .deleteItemFromCart(cartItem.menuItem.itemId);
+                                    try {
+                                      await ref
+                                          .read(cartProvider.notifier)
+                                          .deleteItemFromCart(cartItem.cartItemId);
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Failed to remove item: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                   icon: const Icon(Icons.delete_outline_rounded),
                                 ),
@@ -117,7 +128,7 @@ class CartScreen extends ConsumerWidget {
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          '₹${cart.totalCartPrice}',
+                          '₹${cart.totalCartPrice.toStringAsFixed(0)}',
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -128,16 +139,34 @@ class CartScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 14),
                   FilledButton.icon(
-                    onPressed: () async {
-                      await ref.read(orderServiceProvider).placeOrder();
-                      await ref.read(cartProvider.notifier).refreshCart();
-                      ref.invalidate(myOrdersProvider);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Order placed successfully')),
-                        );
-                      }
-                    },
+                    onPressed: cart.cartItems.isEmpty
+                        ? null
+                        : () async {
+                            try {
+                              await ref.read(orderServiceProvider).placeOrder();
+                              await ref.read(cartProvider.notifier).refreshCart();
+                              ref.invalidate(myOrdersProvider);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Order placed successfully! 🎉'),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to place order: $e'),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
                     icon: const Icon(Icons.bolt_rounded),
                     label: const Text('Place Order'),
                   ),

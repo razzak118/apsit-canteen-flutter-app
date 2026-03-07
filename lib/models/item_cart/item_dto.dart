@@ -18,14 +18,22 @@ class ItemDto {
   });
 
   factory ItemDto.fromJson(Map<String, dynamic> json) {
+    final availabilityRaw = json['isAvailable'] ?? json['available'];
+    final parsedAvailability = switch (availabilityRaw) {
+      bool b => b,
+      num n => n != 0,
+      String s => s.toLowerCase() == 'true' || s == '1',
+      _ => false,
+    };
+
     return ItemDto(
-      itemId: json['itemId'] as int,
+      itemId: (json['itemId'] as num).toInt(),
       itemName: json['itemName'] as String,
-      price: json['price'] as int,
+      price: (json['price'] as num).toInt(),
       imageUrl: json['imageUrl'] as String,
-      category: json['category'] as String,
-      isAvailable: json['isAvailable'] as bool? ?? false,
-      readyIn: json['readyIn'] as int,
+      category: (json['category'] ?? '').toString(),
+      isAvailable: parsedAvailability,
+      readyIn: (json['readyIn'] as num).toInt(),
     );
   }
 

@@ -4,7 +4,8 @@ import 'api_client.dart';
 class ItemService {
   final ApiClient _apiClient;
 
-  ItemService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  ItemService({ApiClient? apiClient, Future<void> Function()? onUnauthorized})
+      : _apiClient = apiClient ?? ApiClient(onUnauthorized: onUnauthorized);
 
   Future<List<ItemDto>> getItems() async {
     final json = await _apiClient.get('/item');
@@ -14,7 +15,8 @@ class ItemService {
   }
 
   Future<List<ItemDto>> getItemsByCategory(String categoryName) async {
-    final json = await _apiClient.get('/item/category/$categoryName');
+    final normalizedCategory = categoryName.trim().toUpperCase();
+    final json = await _apiClient.get('/item/category/$normalizedCategory');
     return (json as List<dynamic>)
         .map((item) => ItemDto.fromJson(item as Map<String, dynamic>))
         .toList();

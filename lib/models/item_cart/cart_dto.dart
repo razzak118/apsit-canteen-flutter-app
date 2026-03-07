@@ -3,7 +3,7 @@ import 'cart_item_dto.dart';
 class CartDto {
   final int cartId;
   final List<CartItemDto> cartItems;
-  final int totalCartPrice;
+  final double totalCartPrice;
 
   const CartDto({
     required this.cartId,
@@ -19,7 +19,7 @@ class CartDto {
     return CartDto(
       cartId: json['cartId'] as int,
       cartItems: items,
-      totalCartPrice: json['totalCartPrice'] as int,
+      totalCartPrice: (json['totalCartPrice'] as num?)?.toDouble() ?? 0,
     );
   }
 

@@ -5,7 +5,8 @@ import 'api_client.dart';
 class UserService {
   final ApiClient _apiClient;
 
-  UserService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  UserService({ApiClient? apiClient, Future<void> Function()? onUnauthorized})
+      : _apiClient = apiClient ?? ApiClient(onUnauthorized: onUnauthorized);
 
   Future<List<OrderTicketDto>> getMyOrders() async {
     final json = await _apiClient.get('/users/my-orders');

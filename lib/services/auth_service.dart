@@ -9,8 +9,11 @@ class AuthService {
   final ApiClient _apiClient;
   final TokenStorageService _tokenStorage;
 
-  AuthService({ApiClient? apiClient, TokenStorageService? tokenStorage})
-      : _apiClient = apiClient ?? ApiClient(),
+  AuthService({
+    ApiClient? apiClient,
+    TokenStorageService? tokenStorage,
+    Future<void> Function()? onUnauthorized,
+  })  : _apiClient = apiClient ?? ApiClient(onUnauthorized: onUnauthorized),
         _tokenStorage = tokenStorage ?? TokenStorageService();
 
   Future<LoginResponseDto> login(LoginRequestDto request) async {
