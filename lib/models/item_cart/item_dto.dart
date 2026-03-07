@@ -24,7 +24,7 @@ class ItemDto {
       price: json['price'] as int,
       imageUrl: json['imageUrl'] as String,
       category: json['category'] as String,
-      isAvailable: json['isAvailable'] as bool,
+      isAvailable: json['isAvailable'] as bool? ?? false,
       readyIn: json['readyIn'] as int,
     );
   }
