@@ -6,6 +6,7 @@ import '../providers/cart_provider.dart';
 import '../providers/home_providers.dart';
 import '../providers/order_profile_providers.dart';
 import '../widgets/glass_card.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -54,6 +55,26 @@ class ProfileScreen extends ConsumerWidget {
                         Text(profile.email),
                         const SizedBox(height: 4),
                         Text(profile.mobileNumber),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  GlassCard(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.lock_reset_rounded, color: Color(0xFFFF5A1F)),
+                          title: const Text('Change Password'),
+                          subtitle: const Text('Update your account password'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ChangePasswordScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),

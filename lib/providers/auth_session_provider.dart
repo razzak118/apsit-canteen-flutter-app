@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/auth/login_request_dto.dart';
 import '../models/auth/signup_request_dto.dart';
+import 'home_providers.dart';
 import 'service_providers.dart';
 
 class AuthSessionNotifier extends AsyncNotifier<bool> {
@@ -15,13 +16,26 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
     required String username,
     required String password,
   }) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    // Don't set state to loading - let the UI handle loading indicator
+    final result = await AsyncValue.guard(() async {
       await ref.read(authServiceProvider).login(
             LoginRequestDto(username: username, password: password),
           );
+      // Invalidate all items providers to fetch with new JWT token
+      ref.invalidate(allItemsProvider);
+      ref.invalidate(filteredItemsProvider);
+      ref.invalidate(instantReadyItemsProvider);
       return true;
     });
+    
+    // On error, keep state as false (not logged in) instead of error state
+    // This prevents the login screen from being rebuilt and losing the error message
+    if (result.hasError) {
+      state = const AsyncData(false);
+      throw result.error!;
+    } else {
+      state = result;
+    }
   }
 
   Future<void> signup({
@@ -42,6 +56,11 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
 
   Future<void> logout() async {
     await ref.read(authServiceProvider).logout();
+    // Invalidate all data providers on logout
+    ref.invalidate(allItemsProvider);
+    ref.invalidate(filteredItemsProvider);
+    ref.invalidate(instantReadyItemsProvider);
+    ref.invalidate(selectedCategoryProvider);
     state = const AsyncData(false);
   }
 

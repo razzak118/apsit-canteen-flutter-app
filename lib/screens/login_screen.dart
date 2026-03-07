@@ -16,6 +16,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -26,9 +28,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authSessionProvider);
-    final isLoading = authState.isLoading;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -74,6 +73,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               color: const Color(0xFF64748B),
                             ),
                       ),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Color(0xFFDC2626),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       TextFormField(
                         controller: _usernameController,
@@ -118,29 +127,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
-                          onPressed: isLoading
+                          onPressed: _isLoading
                               ? null
                               : () async {
                                   if (!_formKey.currentState!.validate()) {
                                     return;
                                   }
-                                  await ref.read(authSessionProvider.notifier).login(
-                                        username: _usernameController.text.trim(),
-                                        password: _passwordController.text,
-                                      );
-
-                                  final nextState = ref.read(authSessionProvider);
-                                  if (nextState.hasError && context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          nextState.error.toString(),
-                                        ),
-                                      ),
-                                    );
+                                  
+                                  setState(() {
+                                    _isLoading = true;
+                                    _errorMessage = null;
+                                  });
+                                  
+                                  try {
+                                    await ref.read(authSessionProvider.notifier).login(
+                                          username: _usernameController.text.trim(),
+                                          password: _passwordController.text,
+                                        );
+                                  } catch (e) {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isLoading = false;
+                                        _errorMessage = 'Invalid username or password';
+                                      });
+                                    }
                                   }
                                 },
-                          child: isLoading
+                          child: _isLoading
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
@@ -155,7 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                           const Text('No account yet? '),
                           TextButton(
-                            onPressed: isLoading
+                            onPressed: _isLoading
                                 ? null
                                 : () {
                                     Navigator.of(context).push(

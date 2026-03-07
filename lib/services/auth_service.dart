@@ -1,3 +1,4 @@
+import '../models/auth/change_password_request_dto.dart';
 import '../models/auth/login_request_dto.dart';
 import '../models/auth/login_response_dto.dart';
 import '../models/auth/signup_request_dto.dart';
@@ -36,6 +37,14 @@ class AuthService {
     );
 
     return SignupResponseDto.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> changePassword(ChangePasswordRequestDto request) async {
+    await _apiClient.post(
+      '/auth/change-password',
+      body: request.toJson(),
+      authRequired: true,
+    );
   }
 
   Future<void> logout() {
