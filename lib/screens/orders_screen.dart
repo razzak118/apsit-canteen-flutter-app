@@ -142,11 +142,57 @@ class OrdersScreen extends ConsumerWidget {
               if (orders.isEmpty) {
                 return ListView(
                   padding: const EdgeInsets.all(16),
-                  children: const [
-                    SizedBox(height: 60),
-                    Icon(Icons.receipt_long_rounded, size: 48),
-                    SizedBox(height: 12),
-                    Center(child: Text('No orders yet.')),
+                  children: [
+                    const SizedBox(height: 60),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFFF5A1F).withOpacity(0.1),
+                            const Color(0xFFFF8C42).withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFFFE4D6),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF5A1F).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long_rounded,
+                              size: 56,
+                              color: Color(0xFFFF5A1F),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'No Orders Yet',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Start ordering your favorite meals from the canteen. Your order history will appear here!',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF64748B),
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               }

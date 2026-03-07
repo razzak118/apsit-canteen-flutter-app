@@ -30,11 +30,77 @@ class CartScreen extends ConsumerWidget {
               if (cart.cartItems.isEmpty) {
                 return ListView(
                   padding: const EdgeInsets.all(16),
-                  children: const [
-                    SizedBox(height: 60),
-                    Icon(Icons.shopping_cart_checkout_rounded, size: 48),
-                    SizedBox(height: 12),
-                    Center(child: Text('Your cart is empty.')),
+                  children: [
+                    const SizedBox(height: 60),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFFF5A1F).withOpacity(0.1),
+                            const Color(0xFFFF8C42).withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFFFE4D6),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF5A1F).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.shopping_cart_outlined,
+                              size: 56,
+                              color: Color(0xFFFF5A1F),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Your Cart is Empty',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Explore our delicious menu and start adding items to your cart!',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF64748B),
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                            onPressed: () {
+                              DefaultTabController.of(context).animateTo(0);
+                              Navigator.pop(context);
+                            },
+                            icon: const Icon(Icons.restaurant_menu_rounded),
+                            label: const Text('Browse Menu'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF5A1F),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               }
