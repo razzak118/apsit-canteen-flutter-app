@@ -16,32 +16,32 @@ class PromoBannerCarousel extends StatelessWidget {
     (
       category: null,
       title: 'All Items',
-      subtitle: 'Browse full canteen menu',
-      colors: [Color(0xFFFF7A59), Color(0xFFFFB199)],
+      subtitle: 'Browse full canteen menu 🍽️',
+      colors: [Color(0xFFFF7A18), Color(0xFFFFB347)],
     ),
     (
       category: 'BREAKFAST',
       title: 'Breakfast',
-      subtitle: 'Start your day with fresh meals',
-      colors: [Color(0xFF38BDF8), Color(0xFF818CF8)],
+      subtitle: 'Start your day with hot meals 🥪',
+      colors: [Color(0xFFFFA726), Color(0xFFFF7043)],
     ),
     (
       category: 'SNACK',
       title: 'Snacks',
-      subtitle: 'Quick bites between lectures',
-      colors: [Color(0xFF34D399), Color(0xFF10B981)],
+      subtitle: 'Quick bites between lectures 🌮',
+      colors: [Color(0xFFFF8A65), Color(0xFFFF5252)],
     ),
     (
       category: 'BEVERAGE',
       title: 'Beverages',
-      subtitle: 'Stay hydrated and refreshed',
-      colors: [Color(0xFF60A5FA), Color(0xFF2563EB)],
+      subtitle: 'Stay hydrated and refreshed 🧋',
+      colors: [Color(0xFF4FC3F7), Color(0xFF00ACC1)],
     ),
     (
       category: 'VEG',
       title: 'Veg Specials',
-      subtitle: 'Delicious vegetarian options',
-      colors: [Color(0xFF4ADE80), Color(0xFF16A34A)],
+      subtitle: 'Delicious vegetarian options 🥗',
+      colors: [Color(0xFF8BC34A), Color(0xFF43A047)],
     ),
   ];
 

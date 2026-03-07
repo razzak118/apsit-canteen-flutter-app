@@ -20,15 +20,29 @@ class CanteenUserApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF6B35),
+          seedColor: const Color(0xFFFF5A1F),
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF7F8FD),
+        scaffoldBackgroundColor: const Color(0xFFFFF8F2),
         appBarTheme: const AppBarTheme(
           elevation: 0,
           backgroundColor: Colors.transparent,
           foregroundColor: Color(0xFF101828),
           centerTitle: false,
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFFF5A1F),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF1F2937),
+          contentTextStyle: const TextStyle(color: Colors.white),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       home: const AppEntryScreen(),
