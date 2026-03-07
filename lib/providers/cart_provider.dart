@@ -10,13 +10,15 @@ class CartNotifier extends AsyncNotifier<CartDto> {
   }
 
   Future<void> refreshCart() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => ref.read(cartServiceProvider).getMyCart());
+    // Keep current cart visible while refreshing in background.
+    final nextState = await AsyncValue.guard(
+      () => ref.read(cartServiceProvider).getMyCart(),
+    );
+    state = nextState;
   }
 
   Future<void> addToCart(int itemId) async {
     final previous = state;
-    state = const AsyncLoading();
     final nextState = await AsyncValue.guard(
       () => ref.read(cartServiceProvider).addToCart(itemId),
     );
@@ -29,7 +31,6 @@ class CartNotifier extends AsyncNotifier<CartDto> {
 
   Future<void> removeFromCart(int itemId) async {
     final previous = state;
-    state = const AsyncLoading();
     final nextState = await AsyncValue.guard(
       () => ref.read(cartServiceProvider).removeFromCart(itemId),
     );
@@ -42,7 +43,6 @@ class CartNotifier extends AsyncNotifier<CartDto> {
 
   Future<void> deleteItemFromCart(int itemId) async {
     final previous = state;
-    state = const AsyncLoading();
     final nextState = await AsyncValue.guard(
       () => ref.read(cartServiceProvider).deleteItemFromCart(itemId),
     );
