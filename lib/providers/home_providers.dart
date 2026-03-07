@@ -9,14 +9,38 @@ final allItemsProvider = FutureProvider<List<ItemDto>>((ref) async {
 
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
+final searchQueryProvider = StateProvider<String>((ref) => '');
+
+final priceRangeProvider = StateProvider<(int, int)?>((ref) => null);
+
 final filteredItemsProvider = FutureProvider<List<ItemDto>>((ref) async {
   final selectedCategory = ref.watch(selectedCategoryProvider);
+  final searchQuery = ref.watch(searchQueryProvider);
+  final priceRange = ref.watch(priceRangeProvider);
 
+  List<ItemDto> items;
+
+  // Fetch items from backend
   if (selectedCategory == null) {
-    return ref.read(itemServiceProvider).getItems();
+    items = await ref.read(itemServiceProvider).getItems();
+  } else {
+    items = await ref.read(itemServiceProvider).getItemsByCategory(selectedCategory);
   }
 
-  return ref.read(itemServiceProvider).getItemsByCategory(selectedCategory);
+  // Apply search filter (fuzzy search - partial name matching)
+  if (searchQuery.isNotEmpty) {
+    items = items
+        .where((item) => item.itemName.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+  }
+
+  // Apply price range filter
+  if (priceRange != null) {
+    final (minPrice, maxPrice) = priceRange;
+    items = items.where((item) => item.price >= minPrice && item.price <= maxPrice).toList();
+  }
+
+  return items;
 });
 
 final instantReadyItemsProvider = FutureProvider<List<ItemDto>>((ref) async {

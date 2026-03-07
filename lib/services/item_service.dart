@@ -28,4 +28,16 @@ class ItemService {
         .map((item) => ItemDto.fromJson(item as Map<String, dynamic>))
         .toList();
   }
+
+  Future<ItemDto> getItemByName(String itemName) async {
+    final json = await _apiClient.get('/item/$itemName');
+    return ItemDto.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<List<ItemDto>> getItemsByPriceRange(int minPrice, int maxPrice) async {
+    final json = await _apiClient.get('/item/price-range?minPrice=$minPrice&highPrice=$maxPrice');
+    return (json as List<dynamic>)
+        .map((item) => ItemDto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
 }

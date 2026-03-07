@@ -4,11 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/cart_provider.dart';
 import '../providers/home_providers.dart';
 import '../widgets/item_card.dart';
-import '../widgets/promo_banner_carousel.dart';
 import 'item_detail_screen.dart';
+import 'search_results_screen.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   String _displayCategoryTitle(String? selectedCategory) {
     if (selectedCategory == null) return 'Popular Today';
@@ -20,8 +33,252 @@ class HomeScreen extends ConsumerWidget {
     return '$pretty Picks';
   }
 
+  void _showPriceFilterDialog() {
+    final currentRange = ref.read(priceRangeProvider);
+    int minPrice = currentRange?.$1 ?? 0;
+    int maxPrice = currentRange?.$2 ?? 500;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.tune, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text('Filter by Price'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.currency_rupee, color: Colors.white, size: 28),
+                    Text(
+                      '$minPrice',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        '—',
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.currency_rupee, color: Colors.white, size: 28),
+                    Text(
+                      '$maxPrice',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFE4D6)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Min Price',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.currency_rupee, color: Colors.white, size: 14),
+                              Text(
+                                '$minPrice',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SliderTheme(
+                      data: SliderThemeData(
+                        activeTrackColor: const Color(0xFFFF5A1F),
+                        inactiveTrackColor: const Color(0xFFFFE4D6),
+                        thumbColor: const Color(0xFFFF5A1F),
+                        overlayColor: const Color(0xFFFF5A1F).withOpacity(0.2),
+                        valueIndicatorColor: const Color(0xFFFF5A1F),
+                        valueIndicatorTextStyle: const TextStyle(color: Colors.white),
+                      ),
+                      child: Slider(
+                        value: minPrice.toDouble(),
+                        min: 0,
+                        max: 500,
+                        divisions: 50,
+                        label: '₹$minPrice',
+                        onChanged: (value) {
+                          setState(() {
+                            minPrice = value.toInt();
+                            if (minPrice > maxPrice) maxPrice = minPrice;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFE4D6)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Max Price',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.currency_rupee, color: Colors.white, size: 14),
+                              Text(
+                                '$maxPrice',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SliderTheme(
+                      data: SliderThemeData(
+                        activeTrackColor: const Color(0xFFFF5A1F),
+                        inactiveTrackColor: const Color(0xFFFFE4D6),
+                        thumbColor: const Color(0xFFFF5A1F),
+                        overlayColor: const Color(0xFFFF5A1F).withOpacity(0.2),
+                        valueIndicatorColor: const Color(0xFFFF5A1F),
+                        valueIndicatorTextStyle: const TextStyle(color: Colors.white),
+                      ),
+                      child: Slider(
+                        value: maxPrice.toDouble(),
+                        min: 0,
+                        max: 500,
+                        divisions: 50,
+                        label: '₹$maxPrice',
+                        onChanged: (value) {
+                          setState(() {
+                            maxPrice = value.toInt();
+                            if (maxPrice < minPrice) minPrice = maxPrice;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                ref.read(priceRangeProvider.notifier).state = null;
+                Navigator.pop(context);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+              ),
+              child: const Text('Clear'),
+            ),
+            FilledButton(
+              onPressed: () {
+                ref.read(priceRangeProvider.notifier).state = (minPrice, maxPrice);
+                Navigator.pop(context);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFF5A1F),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text('Apply Filter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final itemsAsync = ref.watch(filteredItemsProvider);
 
@@ -39,8 +296,85 @@ class HomeScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Column(
                 children: [
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              hintText: 'Search for dishes...',
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear_rounded),
+                                      onPressed: () {
+                                        setState(() {
+                                          _searchController.clear();
+                                        });
+                                        ref.read(searchQueryProvider.notifier).state = '';
+                                      },
+                                    )
+                                  : null,
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {});
+                            },
+                            onSubmitted: (value) {
+                              if (value.trim().isEmpty) return;
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => SearchResultsScreen(searchQuery: value.trim()),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: ref.watch(priceRangeProvider) != null
+                                ? const Color(0xFFFF5A1F)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0F000000),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            onPressed: _showPriceFilterDialog,
+                            icon: Icon(
+                              Icons.tune_rounded,
+                              color: ref.watch(priceRangeProvider) != null
+                                  ? Colors.white
+                                  : const Color(0xFF64748B),
+                            ),
+                            tooltip: 'Filter by price',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Container(
-                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
@@ -111,31 +445,70 @@ class HomeScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    Text(
-                      _displayCategoryTitle(selectedCategory),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _displayCategoryTitle(selectedCategory),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
                           ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE5D4),
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      child: Text(
-                        selectedCategory ?? 'ALL ITEMS',
-                        style: const TextStyle(
-                          color: Color(0xFF9A3412),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE5D4),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Text(
+                            selectedCategory ?? 'ALL ITEMS',
+                            style: const TextStyle(
+                              color: Color(0xFF9A3412),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (ref.watch(searchQueryProvider).isNotEmpty || ref.watch(priceRangeProvider) != null) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (ref.watch(searchQueryProvider).isNotEmpty)
+                            Chip(
+                              label: Text('Search: \"${ref.watch(searchQueryProvider)}\"'),
+                              deleteIcon: const Icon(Icons.close, size: 18),
+                              onDeleted: () {
+                                setState(() {
+                                  _searchController.clear();
+                                });
+                                ref.read(searchQueryProvider.notifier).state = '';
+                              },
+                              backgroundColor: const Color(0xFFE0F2FE),
+                              side: BorderSide.none,
+                            ),
+                          if (ref.watch(priceRangeProvider) != null)
+                            Chip(
+                              label: Text(
+                                  'Price: ₹${ref.watch(priceRangeProvider)!.$1} - ₹${ref.watch(priceRangeProvider)!.$2}'),
+                              deleteIcon: const Icon(Icons.close, size: 18),
+                              onDeleted: () {
+                                ref.read(priceRangeProvider.notifier).state = null;
+                              },
+                              backgroundColor: const Color(0xFFFFE5D4),
+                              side: BorderSide.none,
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -165,14 +538,49 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   data: (items) {
                     if (items.isEmpty) {
+                      final searchQuery = ref.watch(searchQueryProvider);
                       return Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Text('No items available right now.'),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                searchQuery.isNotEmpty 
+                                    ? Icons.search_off_rounded 
+                                    : Icons.restaurant_menu_rounded,
+                                size: 48,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                searchQuery.isNotEmpty
+                                    ? 'No items found for "$searchQuery"'
+                                    : 'No items available right now.',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                              ),
+                              if (searchQuery.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchController.clear();
+                                    });
+                                    ref.read(searchQueryProvider.notifier).state = '';
+                                  },
+                                  child: const Text('Clear search'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       );
                     }
 
