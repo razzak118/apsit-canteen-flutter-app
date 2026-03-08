@@ -28,7 +28,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartProvider);
     final cartItemCount = cartAsync.whenOrNull(
-      data: (cart) => cart?.cartItems.length ?? 0,
+      data: (cart) => cart.cartItems.length,
     ) ?? 0;
 
     return Scaffold(
