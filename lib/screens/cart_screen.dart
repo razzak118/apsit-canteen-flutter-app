@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/cart_provider.dart';
+import '../providers/navigation_provider.dart';
 import '../providers/service_providers.dart';
 import '../widgets/glass_card.dart';
 
@@ -33,7 +34,8 @@ class CartScreen extends ConsumerWidget {
                   children: [
                     const SizedBox(height: 60),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 40),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -64,25 +66,32 @@ class CartScreen extends ConsumerWidget {
                           const SizedBox(height: 20),
                           Text(
                             'Your Cart is Empty',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'Explore our delicious menu and start adding items to your cart!',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF64748B),
-                              height: 1.5,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: const Color(0xFF64748B),
+                                  height: 1.5,
+                                ),
                           ),
                           const SizedBox(height: 24),
                           FilledButton.icon(
                             onPressed: () {
-                              DefaultTabController.of(context).animateTo(0);
-                              Navigator.pop(context);
+                              ref
+                                  .read(mainNavigationIndexProvider.notifier)
+                                  .state = 0;
                             },
                             icon: const Icon(Icons.restaurant_menu_rounded),
                             label: const Text('Browse Menu'),
@@ -130,45 +139,53 @@ class CartScreen extends ConsumerWidget {
                                     try {
                                       await ref
                                           .read(cartProvider.notifier)
-                                          .deleteItemFromCart(cartItem.cartItemId);
+                                          .deleteItemFromCart(
+                                              cartItem.cartItemId);
                                     } catch (e) {
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('Failed to remove item: $e'),
+                                            content: Text(
+                                                'Failed to remove item: $e'),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
                                       }
                                     }
                                   },
-                                  icon: const Icon(Icons.delete_outline_rounded),
+                                  icon:
+                                      const Icon(Icons.delete_outline_rounded),
                                 ),
                               ],
                             ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('₹${cartItem.cartItemPrice.toStringAsFixed(0)}'),
+                                Text(
+                                    '₹${cartItem.cartItemPrice.toStringAsFixed(0)}'),
                                 Row(
                                   children: [
                                     IconButton.filledTonal(
                                       onPressed: () async {
                                         await ref
                                             .read(cartProvider.notifier)
-                                            .removeFromCart(cartItem.menuItem.itemId);
+                                            .removeFromCart(
+                                                cartItem.menuItem.itemId);
                                       },
                                       icon: const Icon(Icons.remove),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10),
                                       child: Text('${cartItem.quantity}'),
                                     ),
                                     IconButton.filledTonal(
                                       onPressed: () async {
                                         await ref
                                             .read(cartProvider.notifier)
-                                            .addToCart(cartItem.menuItem.itemId);
+                                            .addToCart(
+                                                cartItem.menuItem.itemId);
                                       },
                                       icon: const Icon(Icons.add),
                                     ),
@@ -210,12 +227,15 @@ class CartScreen extends ConsumerWidget {
                         : () async {
                             try {
                               await ref.read(orderServiceProvider).placeOrder();
-                              await ref.read(cartProvider.notifier).refreshCart();
+                              await ref
+                                  .read(cartProvider.notifier)
+                                  .refreshCart();
                               ref.invalidate(myOrdersProvider);
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Order placed successfully! 🎉'),
+                                    content:
+                                        Text('Order placed successfully! 🎉'),
                                     backgroundColor: Colors.green,
                                     behavior: SnackBarBehavior.floating,
                                   ),

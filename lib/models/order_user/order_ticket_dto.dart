@@ -1,6 +1,7 @@
 import 'order_item_dto.dart';
 
 class OrderTicketDto {
+  final int? orderId;
   final String username;
   final List<OrderItemDto> orderItems;
   final double totalAmount;
@@ -10,6 +11,7 @@ class OrderTicketDto {
   final String? updatedAt;
 
   const OrderTicketDto({
+    this.orderId,
     required this.username,
     required this.orderItems,
     required this.totalAmount,
@@ -25,6 +27,9 @@ class OrderTicketDto {
         .toList();
 
     return OrderTicketDto(
+      orderId: (json['orderId'] ?? json['id']) == null
+          ? null
+          : int.tryParse((json['orderId'] ?? json['id']).toString()),
       username: json['username'] as String,
       orderItems: items,
       totalAmount: (json['totalAmount'] as num).toDouble(),
@@ -37,6 +42,7 @@ class OrderTicketDto {
 
   Map<String, dynamic> toJson() {
     return {
+      'orderId': orderId,
       'username': username,
       'orderItems': orderItems.map((item) => item.toJson()).toList(),
       'totalAmount': totalAmount,

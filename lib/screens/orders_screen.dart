@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order_user/order_ticket_dto.dart';
 import '../providers/order_profile_providers.dart';
+import 'order_detail_screen.dart';
 import '../widgets/glass_card.dart';
 
 class OrdersScreen extends ConsumerWidget {
@@ -63,7 +64,8 @@ class OrdersScreen extends ConsumerWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: _statusColor(order.orderStatus).withValues(alpha: 0.12),
+                  color:
+                      _statusColor(order.orderStatus).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -81,6 +83,17 @@ class OrdersScreen extends ConsumerWidget {
           Text(
             'Placed at: ${_formatPlacedAt(context, order.createdAt)}',
             style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${order.orderItems.length} item(s)',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const Icon(Icons.chevron_right_rounded),
+            ],
           ),
         ],
       ),
@@ -107,7 +120,8 @@ class OrdersScreen extends ConsumerWidget {
       'Dec',
     ];
 
-    final datePart = '${local.day.toString().padLeft(2, '0')} ${months[local.month - 1]} ${local.year}';
+    final datePart =
+        '${local.day.toString().padLeft(2, '0')} ${months[local.month - 1]} ${local.year}';
     final timePart = TimeOfDay.fromDateTime(local).format(context);
     return '$datePart, $timePart';
   }
@@ -145,7 +159,8 @@ class OrdersScreen extends ConsumerWidget {
                   children: [
                     const SizedBox(height: 60),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 40),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -176,19 +191,25 @@ class OrdersScreen extends ConsumerWidget {
                           const SizedBox(height: 20),
                           Text(
                             'No Orders Yet',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'Start ordering your favorite meals from the canteen. Your order history will appear here!',
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF64748B),
-                              height: 1.5,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: const Color(0xFF64748B),
+                                  height: 1.5,
+                                ),
                           ),
                         ],
                       ),
@@ -198,8 +219,7 @@ class OrdersScreen extends ConsumerWidget {
               }
 
               final now = DateTime.now();
-              final sortedOrders = [...orders]
-                ..sort((a, b) {
+              final sortedOrders = [...orders]..sort((a, b) {
                   final aTime = _parsePlacedAt(a.createdAt);
                   final bTime = _parsePlacedAt(b.createdAt);
 
@@ -232,7 +252,19 @@ class OrdersScreen extends ConsumerWidget {
 
                 children.add(_sectionHeader(context, entry.key));
                 for (final order in entry.value) {
-                  children.add(_orderCard(context, order));
+                  children.add(
+                    InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => OrderDetailScreen(order: order),
+                          ),
+                        );
+                      },
+                      child: _orderCard(context, order),
+                    ),
+                  );
                   children.add(const SizedBox(height: 12));
                 }
               }

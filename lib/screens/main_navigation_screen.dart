@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/cart_provider.dart';
+import '../providers/navigation_provider.dart';
 import 'cart_screen.dart';
 import 'home_screen.dart';
 import 'orders_screen.dart';
@@ -11,12 +12,11 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
-  int _index = 0;
-
   static const _screens = [
     HomeScreen(),
     CartScreen(),
@@ -26,19 +26,24 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final index = ref.watch(mainNavigationIndexProvider);
     final cartAsync = ref.watch(cartProvider);
     final cartItemCount = cartAsync.whenOrNull(
-      data: (cart) => cart.cartItems.length,
-    ) ?? 0;
+          data: (cart) => cart.cartItems.length,
+        ) ??
+        0;
 
     return Scaffold(
-      body: _screens[_index],
+      body: _screens[index],
       bottomNavigationBar: NavigationBar(
         height: 72,
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        selectedIndex: index,
+        onDestinationSelected: (value) {
+          ref.read(mainNavigationIndexProvider.notifier).state = value;
+        },
         destinations: [
-          const NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+          const NavigationDestination(
+              icon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(
             icon: Badge(
               label: Text('$cartItemCount'),
@@ -47,8 +52,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             ),
             label: 'Cart',
           ),
-          const NavigationDestination(icon: Icon(Icons.receipt_long_rounded), label: 'Orders'),
-          const NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
+          const NavigationDestination(
+              icon: Icon(Icons.receipt_long_rounded), label: 'Orders'),
+          const NavigationDestination(
+              icon: Icon(Icons.person_rounded), label: 'Profile'),
         ],
       ),
     );

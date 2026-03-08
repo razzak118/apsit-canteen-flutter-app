@@ -11,4 +11,13 @@ class OrderService {
     final json = await _apiClient.post('/order/place');
     return OrderTicketDto.fromJson(json as Map<String, dynamic>);
   }
+
+  Future<OrderTicketDto> getOrderDetails(int orderId) async {
+    final json = await _apiClient.post('/order/get-order-detail/$orderId');
+    return OrderTicketDto.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<void> reOrder(int orderId) async {
+    await _apiClient.post('/order/re-order/$orderId');
+  }
 }
