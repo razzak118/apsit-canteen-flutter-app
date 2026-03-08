@@ -6,6 +6,7 @@ import '../providers/cart_provider.dart';
 import '../providers/home_providers.dart';
 import '../providers/order_profile_providers.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/skeleton_box.dart';
 import 'change_password_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -21,7 +22,8 @@ class ProfileScreen extends ConsumerWidget {
         body: RefreshIndicator(
           onRefresh: () async => ref.invalidate(myProfileProvider),
           child: profileAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            skipLoadingOnRefresh: false,
+            loading: () => const _ProfileSkeleton(),
             error: (error, _) => ListView(
               padding: const EdgeInsets.all(16),
               children: [Text('Unable to load profile: $error')],
@@ -63,7 +65,8 @@ class ProfileScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: const Icon(Icons.lock_reset_rounded, color: Color(0xFFFF5A1F)),
+                          leading: const Icon(Icons.lock_reset_rounded,
+                              color: Color(0xFFFF5A1F)),
                           title: const Text('Change Password'),
                           subtitle: const Text('Update your account password'),
                           trailing: const Icon(Icons.chevron_right_rounded),
@@ -88,7 +91,8 @@ class ProfileScreen extends ConsumerWidget {
                       ref.invalidate(allItemsProvider);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Logged out successfully')),
+                          const SnackBar(
+                              content: Text('Logged out successfully')),
                         );
                       }
                     },
@@ -101,6 +105,61 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Column(
+            children: [
+              CircleAvatar(radius: 38, backgroundColor: Color(0xFFE5E7EB)),
+              SizedBox(height: 12),
+              SkeletonBox(height: 18, width: 140),
+              SizedBox(height: 8),
+              SkeletonBox(height: 14, width: 190),
+              SizedBox(height: 6),
+              SkeletonBox(height: 14, width: 120),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  SkeletonBox(height: 24, width: 24),
+                  SizedBox(width: 12),
+                  SkeletonBox(height: 16, width: 150),
+                ],
+              ),
+              SkeletonBox(height: 16, width: 16),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        const SkeletonBox(
+            height: 44, borderRadius: BorderRadius.all(Radius.circular(14))),
+      ],
     );
   }
 }

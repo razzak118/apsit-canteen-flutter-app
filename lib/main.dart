@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/auth_session_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'widgets/global_loading_overlay.dart';
 
 void main() {
   runApp(const ProviderScope(child: CanteenUserApp()));
@@ -35,16 +36,35 @@ class CanteenUserApp extends StatelessWidget {
             backgroundColor: const Color(0xFFFF5A1F),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF1F2937),
           contentTextStyle: const TextStyle(color: Colors.white),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          },
         ),
       ),
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            const GlobalLoadingOverlay(),
+          ],
+        );
+      },
       home: const AppEntryScreen(),
     );
   }
@@ -62,8 +82,8 @@ class AppEntryScreen extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (_, __) => const LoginScreen(),
-      data: (isLoggedIn) => isLoggedIn ? const MainNavigationScreen() : const LoginScreen(),
+      data: (isLoggedIn) =>
+          isLoggedIn ? const MainNavigationScreen() : const LoginScreen(),
     );
   }
 }
-

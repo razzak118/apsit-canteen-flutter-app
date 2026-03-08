@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/auth/change_password_request_dto.dart';
 import '../providers/service_providers.dart';
+import '../providers/transaction_provider.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -38,12 +39,14 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authServiceProvider).changePassword(
-            ChangePasswordRequestDto(
-              oldPassword: _currentPasswordController.text,
-              newPassword: _newPasswordController.text,
-            ),
-          );
+      await ref.read(transactionCounterProvider.notifier).guard(
+            () => ref.read(authServiceProvider).changePassword(
+                  ChangePasswordRequestDto(
+                    oldPassword: _currentPasswordController.text,
+                    newPassword: _newPasswordController.text,
+                  ),
+                ),
+            );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

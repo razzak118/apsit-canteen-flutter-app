@@ -4,6 +4,7 @@ import '../models/auth/login_request_dto.dart';
 import '../models/auth/signup_request_dto.dart';
 import 'home_providers.dart';
 import 'service_providers.dart';
+import 'transaction_provider.dart';
 
 class AuthSessionNotifier extends AsyncNotifier<bool> {
   @override
@@ -17,17 +18,19 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
     required String password,
   }) async {
     // Don't set state to loading - let the UI handle loading indicator
-    final result = await AsyncValue.guard(() async {
-      await ref.read(authServiceProvider).login(
-            LoginRequestDto(username: username, password: password),
-          );
-      // Invalidate all items providers to fetch with new JWT token
-      ref.invalidate(allItemsProvider);
-      ref.invalidate(filteredItemsProvider);
-      ref.invalidate(instantReadyItemsProvider);
-      return true;
-    });
-    
+    final result = await ref.read(transactionCounterProvider.notifier).guard(
+          () => AsyncValue.guard(() async {
+            await ref.read(authServiceProvider).login(
+                  LoginRequestDto(username: username, password: password),
+                );
+            // Invalidate all items providers to fetch with new JWT token
+            ref.invalidate(allItemsProvider);
+            ref.invalidate(filteredItemsProvider);
+            ref.invalidate(instantReadyItemsProvider);
+            return true;
+          }),
+        );
+
     // On error, keep state as false (not logged in) instead of error state
     // This prevents the login screen from being rebuilt and losing the error message
     if (result.hasError) {
@@ -44,18 +47,22 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
     required String mobileNumber,
     required String role,
   }) async {
-    await ref.read(authServiceProvider).signup(
-          SignupRequestDto(
-            username: username,
-            password: password,
-            mobileNumber: mobileNumber,
-            role: role,
-          ),
+    await ref.read(transactionCounterProvider.notifier).guard(
+          () => ref.read(authServiceProvider).signup(
+                SignupRequestDto(
+                  username: username,
+                  password: password,
+                  mobileNumber: mobileNumber,
+                  role: role,
+                ),
+              ),
         );
   }
 
   Future<void> logout() async {
-    await ref.read(authServiceProvider).logout();
+    await ref
+        .read(transactionCounterProvider.notifier)
+        .guard(() => ref.read(authServiceProvider).logout());
     // Invalidate all data providers on logout
     ref.invalidate(allItemsProvider);
     ref.invalidate(filteredItemsProvider);

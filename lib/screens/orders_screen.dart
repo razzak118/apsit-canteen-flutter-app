@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order_user/order_ticket_dto.dart';
 import '../providers/order_profile_providers.dart';
+import '../widgets/skeleton_box.dart';
 import 'order_detail_screen.dart';
 import '../widgets/glass_card.dart';
 
@@ -147,7 +148,8 @@ class OrdersScreen extends ConsumerWidget {
         body: RefreshIndicator(
           onRefresh: () async => ref.invalidate(myOrdersProvider),
           child: ordersAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            skipLoadingOnRefresh: false,
+            loading: () => const _OrdersSkeleton(),
             error: (error, _) => ListView(
               padding: const EdgeInsets.all(16),
               children: [Text('Failed to load orders: $error')],
@@ -281,6 +283,55 @@ class OrdersScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OrdersSkeleton extends StatelessWidget {
+  const _OrdersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const SkeletonBox(height: 18, width: 90),
+        const SizedBox(height: 10),
+        ...List.generate(
+          4,
+          (_) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SkeletonBox(height: 24, width: 72),
+                      SkeletonBox(height: 24, width: 92),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  SkeletonBox(height: 13, width: double.infinity),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SkeletonBox(height: 12, width: 70),
+                      SkeletonBox(height: 14, width: 14),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

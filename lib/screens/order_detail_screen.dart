@@ -7,6 +7,7 @@ import '../providers/cart_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/order_profile_providers.dart';
 import '../providers/service_providers.dart';
+import '../providers/transaction_provider.dart';
 import '../widgets/glass_card.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,7 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   late Future<OrderTicketDto> _detailFuture;
   bool _isReordering = false;
+  bool _isCancelling = false;
 
   @override
   void initState() {
@@ -78,6 +80,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
   }
 
+  bool _isPendingStatus(String status) {
+    return status.trim().toUpperCase() == 'PENDING';
+  }
+
   Future<void> _handleReorder() async {
     final orderId = widget.order.orderId;
     if (orderId == null || _isReordering) return;
@@ -104,7 +110,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
     setState(() => _isReordering = true);
     try {
-      await ref.read(orderServiceProvider).reOrder(orderId);
+      await ref
+          .read(transactionCounterProvider.notifier)
+          .guard(() => ref.read(orderServiceProvider).reOrder(orderId));
       ref.invalidate(cartProvider);
       ref.invalidate(myOrdersProvider);
 
@@ -132,6 +140,74 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     } finally {
       if (mounted) {
         setState(() => _isReordering = false);
+      }
+    }
+  }
+
+  Future<void> _handleCancelOrder(OrderTicketDto order) async {
+    final orderId = order.orderId;
+    if (orderId == null ||
+        _isCancelling ||
+        !_isPendingStatus(order.orderStatus)) {
+      return;
+    }
+
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Order'),
+        content: const Text('Are you sure you want to cancel this order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (approved != true) return;
+
+    setState(() => _isCancelling = true);
+    try {
+      await ref
+          .read(transactionCounterProvider.notifier)
+          .guard(() => ref.read(orderServiceProvider).cancelOrder(orderId));
+
+      ref.invalidate(myOrdersProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled successfully.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        ref.read(mainNavigationIndexProvider.notifier).state = 2;
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCancelling = false);
       }
     }
   }
@@ -283,6 +359,28 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 label: Text(
                     _isReordering ? 'Reordering...' : 'Reorder Same Items'),
               ),
+              if (_isPendingStatus(order.orderStatus)) ...[
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed:
+                      _isCancelling ? null : () => _handleCancelOrder(order),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: _isCancelling
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.cancel_outlined),
+                  label: Text(_isCancelling ? 'Cancelling...' : 'Cancel Order'),
+                ),
+              ],
               if (!canReorder)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),

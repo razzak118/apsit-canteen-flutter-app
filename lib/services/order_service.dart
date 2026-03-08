@@ -20,4 +20,8 @@ class OrderService {
   Future<void> reOrder(int orderId) async {
     await _apiClient.post('/order/re-order/$orderId');
   }
+
+  Future<void> cancelOrder(int orderId) async {
+    await _apiClient.post('/order/cancel-order/$orderId');
+  }
 }

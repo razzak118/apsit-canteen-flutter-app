@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/cart_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/service_providers.dart';
+import '../providers/transaction_provider.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/skeleton_box.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -20,7 +22,8 @@ class CartScreen extends ConsumerWidget {
         body: RefreshIndicator(
           onRefresh: () => ref.read(cartProvider.notifier).refreshCart(),
           child: cartAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            skipLoadingOnRefresh: false,
+            loading: () => const _CartSkeleton(),
             error: (error, _) => ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -168,10 +171,23 @@ class CartScreen extends ConsumerWidget {
                                   children: [
                                     IconButton.filledTonal(
                                       onPressed: () async {
-                                        await ref
-                                            .read(cartProvider.notifier)
-                                            .removeFromCart(
-                                                cartItem.menuItem.itemId);
+                                        try {
+                                          await ref
+                                              .read(cartProvider.notifier)
+                                              .removeFromCart(
+                                                  cartItem.menuItem.itemId);
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Failed to update cart: $e'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
                                       },
                                       icon: const Icon(Icons.remove),
                                     ),
@@ -182,10 +198,23 @@ class CartScreen extends ConsumerWidget {
                                     ),
                                     IconButton.filledTonal(
                                       onPressed: () async {
-                                        await ref
-                                            .read(cartProvider.notifier)
-                                            .addToCart(
-                                                cartItem.menuItem.itemId);
+                                        try {
+                                          await ref
+                                              .read(cartProvider.notifier)
+                                              .addToCart(
+                                                  cartItem.menuItem.itemId);
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Failed to update cart: $e'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
                                       },
                                       icon: const Icon(Icons.add),
                                     ),
@@ -226,7 +255,13 @@ class CartScreen extends ConsumerWidget {
                         ? null
                         : () async {
                             try {
-                              await ref.read(orderServiceProvider).placeOrder();
+                              await ref
+                                  .read(transactionCounterProvider.notifier)
+                                  .guard(
+                                    () => ref
+                                        .read(orderServiceProvider)
+                                        .placeOrder(),
+                                  );
                               await ref
                                   .read(cartProvider.notifier)
                                   .refreshCart();
@@ -262,6 +297,77 @@ class CartScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CartSkeleton extends StatelessWidget {
+  const _CartSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        ...List.generate(
+          3,
+          (_) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SkeletonBox(height: 16, width: 150),
+                      SkeletonBox(height: 20, width: 20),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SkeletonBox(height: 14, width: 52),
+                      Row(
+                        children: [
+                          SkeletonBox(height: 28, width: 28),
+                          SizedBox(width: 8),
+                          SkeletonBox(height: 14, width: 18),
+                          SizedBox(width: 8),
+                          SkeletonBox(height: 28, width: 28),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SkeletonBox(height: 16, width: 56),
+              SkeletonBox(height: 22, width: 84),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        const SkeletonBox(
+            height: 44, borderRadius: BorderRadius.all(Radius.circular(14))),
+      ],
     );
   }
 }

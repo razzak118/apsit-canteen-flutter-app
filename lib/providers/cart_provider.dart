@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/item_cart/cart_dto.dart';
 import 'service_providers.dart';
+import 'transaction_provider.dart';
 
 class CartNotifier extends AsyncNotifier<CartDto> {
   @override
@@ -10,48 +11,44 @@ class CartNotifier extends AsyncNotifier<CartDto> {
   }
 
   Future<void> refreshCart() async {
-    // Keep current cart visible while refreshing in background.
-    final nextState = await AsyncValue.guard(
-      () => ref.read(cartServiceProvider).getMyCart(),
-    );
+    state = const AsyncLoading();
+    final nextState = await ref.read(transactionCounterProvider.notifier).guard(
+          () => AsyncValue.guard(
+            () => ref.read(cartServiceProvider).getMyCart(),
+          ),
+        );
     state = nextState;
+  }
+
+  Future<void> _runCartMutation(Future<CartDto> Function() mutation) async {
+    final previous = state;
+    state = const AsyncLoading();
+    final nextState = await ref.read(transactionCounterProvider.notifier).guard(
+          () => AsyncValue.guard(mutation),
+        );
+    state = nextState;
+    if (nextState.hasError) {
+      state = previous;
+      throw nextState.error!;
+    }
   }
 
   Future<void> addToCart(int itemId) async {
-    final previous = state;
-    final nextState = await AsyncValue.guard(
-      () => ref.read(cartServiceProvider).addToCart(itemId),
-    );
-    state = nextState;
-    if (nextState.hasError) {
-      state = previous;
-      throw nextState.error!;
-    }
+    await _runCartMutation(
+        () => ref.read(cartServiceProvider).addToCart(itemId));
   }
 
   Future<void> removeFromCart(int itemId) async {
-    final previous = state;
-    final nextState = await AsyncValue.guard(
-      () => ref.read(cartServiceProvider).removeFromCart(itemId),
-    );
-    state = nextState;
-    if (nextState.hasError) {
-      state = previous;
-      throw nextState.error!;
-    }
+    await _runCartMutation(
+        () => ref.read(cartServiceProvider).removeFromCart(itemId));
   }
 
   Future<void> deleteItemFromCart(int itemId) async {
-    final previous = state;
-    final nextState = await AsyncValue.guard(
+    await _runCartMutation(
       () => ref.read(cartServiceProvider).deleteItemFromCart(itemId),
     );
-    state = nextState;
-    if (nextState.hasError) {
-      state = previous;
-      throw nextState.error!;
-    }
   }
 }
 
-final cartProvider = AsyncNotifierProvider<CartNotifier, CartDto>(CartNotifier.new);
+final cartProvider =
+    AsyncNotifierProvider<CartNotifier, CartDto>(CartNotifier.new);

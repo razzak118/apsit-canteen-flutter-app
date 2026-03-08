@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/cart_provider.dart';
 import '../providers/home_providers.dart';
 import '../widgets/item_card.dart';
+import '../widgets/skeleton_box.dart';
 import 'item_detail_screen.dart';
 import 'search_results_screen.dart';
 
@@ -28,7 +29,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final pretty = selectedCategory
         .toLowerCase()
         .split('_')
-        .map((part) => part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
+        .map((part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}')
         .join(' ');
     return '$pretty Picks';
   }
@@ -42,7 +45,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
               Container(
@@ -63,7 +67,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
@@ -73,7 +78,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.currency_rupee, color: Colors.white, size: 28),
+                    const Icon(Icons.currency_rupee,
+                        color: Colors.white, size: 28),
                     Text(
                       '$minPrice',
                       style: const TextStyle(
@@ -93,7 +99,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
-                    const Icon(Icons.currency_rupee, color: Colors.white, size: 28),
+                    const Icon(Icons.currency_rupee,
+                        color: Colors.white, size: 28),
                     Text(
                       '$maxPrice',
                       style: const TextStyle(
@@ -126,7 +133,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
@@ -136,7 +144,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.currency_rupee, color: Colors.white, size: 14),
+                              const Icon(Icons.currency_rupee,
+                                  color: Colors.white, size: 14),
                               Text(
                                 '$minPrice',
                                 style: const TextStyle(
@@ -156,7 +165,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         thumbColor: const Color(0xFFFF5A1F),
                         overlayColor: const Color(0xFFFF5A1F).withOpacity(0.2),
                         valueIndicatorColor: const Color(0xFFFF5A1F),
-                        valueIndicatorTextStyle: const TextStyle(color: Colors.white),
+                        valueIndicatorTextStyle:
+                            const TextStyle(color: Colors.white),
                       ),
                       child: Slider(
                         value: minPrice.toDouble(),
@@ -196,7 +206,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFF5A1F), Color(0xFFFF8C42)],
@@ -206,7 +217,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.currency_rupee, color: Colors.white, size: 14),
+                              const Icon(Icons.currency_rupee,
+                                  color: Colors.white, size: 14),
                               Text(
                                 '$maxPrice',
                                 style: const TextStyle(
@@ -226,7 +238,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         thumbColor: const Color(0xFFFF5A1F),
                         overlayColor: const Color(0xFFFF5A1F).withOpacity(0.2),
                         valueIndicatorColor: const Color(0xFFFF5A1F),
-                        valueIndicatorTextStyle: const TextStyle(color: Colors.white),
+                        valueIndicatorTextStyle:
+                            const TextStyle(color: Colors.white),
                       ),
                       child: Slider(
                         value: maxPrice.toDouble(),
@@ -260,14 +273,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             FilledButton(
               onPressed: () {
-                ref.read(priceRangeProvider.notifier).state = (minPrice, maxPrice);
+                ref.read(priceRangeProvider.notifier).state =
+                    (minPrice, maxPrice);
                 Navigator.pop(context);
               },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFFF5A1F),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: const Text('Apply Filter'),
             ),
@@ -315,7 +331,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         setState(() {
                                           _searchController.clear();
                                         });
-                                        ref.read(searchQueryProvider.notifier).state = '';
+                                        ref
+                                            .read(searchQueryProvider.notifier)
+                                            .state = '';
                                       },
                                     )
                                   : null,
@@ -337,7 +355,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               if (value.trim().isEmpty) return;
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => SearchResultsScreen(searchQuery: value.trim()),
+                                  builder: (_) => SearchResultsScreen(
+                                      searchQuery: value.trim()),
                                 ),
                               );
                             },
@@ -395,7 +414,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.24),
                             borderRadius: BorderRadius.circular(100),
@@ -412,7 +432,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const SizedBox(height: 12),
                         Text(
                           'Cravings calling?\nGrab your bite now.',
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 height: 1.15,
@@ -421,9 +444,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Freshly prepared canteen favourites in minutes.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.92),
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.92),
+                                  ),
                         ),
                       ],
                     ),
@@ -444,7 +468,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Column(
                   children: [
                     Row(
@@ -453,14 +478,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Expanded(
                           child: Text(
                             _displayCategoryTitle(selectedCategory),
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF0F172A),
                                 ),
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFE5D4),
                             borderRadius: BorderRadius.circular(100),
@@ -476,7 +505,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ],
                     ),
-                    if (ref.watch(searchQueryProvider).isNotEmpty || ref.watch(priceRangeProvider) != null) ...[
+                    if (ref.watch(searchQueryProvider).isNotEmpty ||
+                        ref.watch(priceRangeProvider) != null) ...[
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -484,13 +514,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           if (ref.watch(searchQueryProvider).isNotEmpty)
                             Chip(
-                              label: Text('Search: \"${ref.watch(searchQueryProvider)}\"'),
+                              label: Text(
+                                  'Search: \"${ref.watch(searchQueryProvider)}\"'),
                               deleteIcon: const Icon(Icons.close, size: 18),
                               onDeleted: () {
                                 setState(() {
                                   _searchController.clear();
                                 });
-                                ref.read(searchQueryProvider.notifier).state = '';
+                                ref.read(searchQueryProvider.notifier).state =
+                                    '';
                               },
                               backgroundColor: const Color(0xFFE0F2FE),
                               side: BorderSide.none,
@@ -501,7 +533,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   'Price: ₹${ref.watch(priceRangeProvider)!.$1} - ₹${ref.watch(priceRangeProvider)!.$2}'),
                               deleteIcon: const Icon(Icons.close, size: 18),
                               onDeleted: () {
-                                ref.read(priceRangeProvider.notifier).state = null;
+                                ref.read(priceRangeProvider.notifier).state =
+                                    null;
                               },
                               backgroundColor: const Color(0xFFFFE5D4),
                               side: BorderSide.none,
@@ -520,12 +553,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ref.invalidate(instantReadyItemsProvider);
                 },
                 child: itemsAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  skipLoadingOnRefresh: false,
+                  loading: () => const _HomeItemsSkeleton(),
                   error: (error, _) => Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFE4E6),
@@ -533,14 +565,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     child: Text(
                       'Unable to load items: $error',
-                      style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          color: Color(0xFF9F1239),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   data: (items) {
                     if (items.isEmpty) {
                       final searchQuery = ref.watch(searchQueryProvider);
                       return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 24),
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -561,12 +596,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFF5A1F).withOpacity(0.15),
+                                  color:
+                                      const Color(0xFFFF5A1F).withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Icon(
-                                  searchQuery.isNotEmpty 
-                                      ? Icons.search_off_rounded 
+                                  searchQuery.isNotEmpty
+                                      ? Icons.search_off_rounded
                                       : Icons.restaurant_menu_rounded,
                                   size: 56,
                                   color: const Color(0xFFFF5A1F),
@@ -577,7 +613,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 searchQuery.isNotEmpty
                                     ? 'No Results Found'
                                     : 'No Items Available',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w800,
                                       color: const Color(0xFF0F172A),
                                     ),
@@ -588,7 +627,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ? 'We couldn\'t find "$searchQuery" in our menu. Try searching for something else!'
                                     : 'The canteen is currently restocking. Check back soon!',
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
                                       color: const Color(0xFF64748B),
                                       height: 1.5,
                                     ),
@@ -600,7 +642,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     setState(() {
                                       _searchController.clear();
                                     });
-                                    ref.read(searchQueryProvider.notifier).state = '';
+                                    ref
+                                        .read(searchQueryProvider.notifier)
+                                        .state = '';
                                   },
                                   icon: const Icon(Icons.clear_rounded),
                                   label: const Text('Clear Search'),
@@ -639,11 +683,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             },
                             onAdd: () async {
                               try {
-                                await ref.read(cartProvider.notifier).addToCart(item.itemId);
+                                await ref
+                                    .read(cartProvider.notifier)
+                                    .addToCart(item.itemId);
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('${item.itemName} added to cart'),
+                                      content: Text(
+                                          '${item.itemName} added to cart'),
                                       backgroundColor: const Color(0xFF15803D),
                                     ),
                                   );
@@ -652,7 +699,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Failed to add to cart: $e'),
+                                      content:
+                                          Text('Failed to add to cart: $e'),
                                       backgroundColor: const Color(0xFFB91C1C),
                                     ),
                                   );
@@ -668,6 +716,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeItemsSkeleton extends StatelessWidget {
+  const _HomeItemsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(
+        5,
+        (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SkeletonBox(
+                  width: 86,
+                  height: 86,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      SkeletonBox(height: 16, width: 140),
+                      SizedBox(height: 8),
+                      SkeletonBox(height: 12, width: 110),
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SkeletonBox(height: 18, width: 56),
+                          SkeletonBox(height: 34, width: 108),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -776,9 +876,8 @@ class _CategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
                     backgroundColor: const Color(0xFFFFE5D4),
                     selectedColor: banner.colors.first,
                     side: BorderSide(
-                      color: isSelected
-                          ? banner.colors.first
-                          : Colors.transparent,
+                      color:
+                          isSelected ? banner.colors.first : Colors.transparent,
                       width: 2,
                     ),
                     padding: const EdgeInsets.symmetric(
