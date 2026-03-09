@@ -30,4 +30,16 @@ class CartDto {
       'totalCartPrice': totalCartPrice,
     };
   }
+
+  CartDto copyWith({
+    int? cartId,
+    List<CartItemDto>? cartItems,
+    double? totalCartPrice,
+  }) {
+    return CartDto(
+      cartId: cartId ?? this.cartId,
+      cartItems: cartItems ?? this.cartItems,
+      totalCartPrice: totalCartPrice ?? this.totalCartPrice,
+    );
+  }
 }

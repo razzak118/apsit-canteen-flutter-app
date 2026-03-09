@@ -19,7 +19,10 @@ class CartScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: const Text('Your Cart')),
         body: RefreshIndicator(
-          onRefresh: () => ref.read(cartProvider.notifier).refreshCart(),
+          onRefresh: () async {
+            await ref.read(cartProvider.notifier).flushPendingQuantityUpdates();
+            await ref.read(cartProvider.notifier).refreshCart();
+          },
           child: cartAsync.when(
             skipLoadingOnRefresh: false,
             loading: () => const _CartSkeleton(),
@@ -116,9 +119,14 @@ class CartScreen extends ConsumerWidget {
                 );
               }
 
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+              return GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  ref.read(cartProvider.notifier).flushPendingQuantityUpdates();
+                },
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
                   ...cart.cartItems.map(
                     (cartItem) => Container(
                       margin: const EdgeInsets.only(bottom: 14),
@@ -264,24 +272,12 @@ class CartScreen extends ConsumerWidget {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             InkWell(
-                                              onTap: () async {
-                                                try {
-                                                  await ref
-                                                      .read(cartProvider.notifier)
-                                                      .removeFromCart(
-                                                          cartItem.menuItem.itemId);
-                                                } catch (e) {
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                            'Failed to update cart: $e'),
-                                                        backgroundColor: Colors.red,
-                                                      ),
-                                                    );
-                                                  }
-                                                }
+                                              onTap: () {
+                                                // Optimistic update - instant UI response
+                                                ref
+                                                    .read(cartProvider.notifier)
+                                                    .adjustQuantityOptimistic(
+                                                        cartItem.cartItemId, -1);
                                               },
                                               borderRadius: const BorderRadius.only(
                                                 topLeft: Radius.circular(10),
@@ -317,24 +313,12 @@ class CartScreen extends ConsumerWidget {
                                               ),
                                             ),
                                             InkWell(
-                                              onTap: () async {
-                                                try {
-                                                  await ref
-                                                      .read(cartProvider.notifier)
-                                                      .addToCart(
-                                                          cartItem.menuItem.itemId);
-                                                } catch (e) {
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                            'Failed to update cart: $e'),
-                                                        backgroundColor: Colors.red,
-                                                      ),
-                                                    );
-                                                  }
-                                                }
+                                              onTap: () {
+                                                // Optimistic update - instant UI response
+                                                ref
+                                                    .read(cartProvider.notifier)
+                                                    .adjustQuantityOptimistic(
+                                                        cartItem.cartItemId, 1);
                                               },
                                               borderRadius: const BorderRadius.only(
                                                 topRight: Radius.circular(10),
@@ -463,6 +447,9 @@ class CartScreen extends ConsumerWidget {
                             : () async {
                             try {
                               await ref
+                                  .read(cartProvider.notifier)
+                                  .flushPendingQuantityUpdates();
+                              await ref
                                   .read(transactionCounterProvider.notifier)
                                   .guard(
                                     () => ref
@@ -565,6 +552,7 @@ class CartScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+                ),
               );
             },
           ),

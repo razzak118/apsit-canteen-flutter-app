@@ -26,4 +26,11 @@ class CartService {
     final json = await _apiClient.post('/cart/deleteItemfromCart/$itemId');
     return CartDto.fromJson(json as Map<String, dynamic>);
   }
+
+  Future<CartDto> adjustQuantity(int cartItemId, int change) async {
+    final json = await _apiClient.post(
+      '/cart/qty/update?cartItemId=$cartItemId&change=$change',
+    );
+    return CartDto.fromJson(json as Map<String, dynamic>);
+  }
 }

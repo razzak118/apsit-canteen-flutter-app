@@ -30,4 +30,18 @@ class CartItemDto {
       'menuItem': menuItem.toJson(),
     };
   }
+
+  CartItemDto copyWith({
+    int? cartItemId,
+    double? cartItemPrice,
+    int? quantity,
+    ItemDto? menuItem,
+  }) {
+    return CartItemDto(
+      cartItemId: cartItemId ?? this.cartItemId,
+      cartItemPrice: cartItemPrice ?? this.cartItemPrice,
+      quantity: quantity ?? this.quantity,
+      menuItem: menuItem ?? this.menuItem,
+    );
+  }
 }
