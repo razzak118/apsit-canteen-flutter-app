@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/order_user/order_item_dto.dart';
 import '../models/order_user/order_ticket_dto.dart';
@@ -165,8 +166,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFFFFE4E6),
+              foregroundColor: const Color(0xFF9F1239),
+              elevation: 0,
             ),
             child: const Text('Yes, Cancel'),
           ),
@@ -274,6 +276,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           }
 
           final order = snapshot.data ?? widget.order;
+          final normalizedStatus = order.orderStatus.trim().toUpperCase();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -330,6 +333,108 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
               ),
               const SizedBox(height: 14),
+              // QR Code section - only show when order is READY
+              if (order.orderUuid != null && normalizedStatus == 'READY') ...[
+                GlassCard(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Your Order is Ready!',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF15803D),
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Show this QR code at the counter to claim your order',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF64748B),
+                            ),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF15803D),
+                            width: 2,
+                          ),
+                        ),
+                        child: QrImageView(
+                          data: order.orderUuid!,
+                          version: QrVersions.auto,
+                          size: 200,
+                          backgroundColor: Colors.white,
+                          errorStateBuilder: (context, error) {
+                            return const Center(
+                              child: Text('Error generating QR code'),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Order Code: ${(order.orderUuid!.length > 8 ? order.orderUuid!.substring(0, 8) : order.orderUuid!).toUpperCase()}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'monospace',
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ]
+              // Show message if order is not ready yet
+              else if (normalizedStatus != 'READY' &&
+                  normalizedStatus != 'CANCELLED' &&
+                  normalizedStatus != 'DELIVERED') ...[
+                GlassCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5A1F).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.restaurant_rounded,
+                          color: Color(0xFFFF5A1F),
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Preparing Your Order',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Your order will be prepared soon. QR code will appear when ready.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
               Text(
                 'Items (${order.orderItems.length})',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -343,7 +448,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   child: _itemTile(context, item),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               FilledButton.icon(
                 onPressed: canReorder && !_isReordering ? _handleReorder : null,
                 icon: _isReordering
@@ -357,28 +462,54 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       )
                     : const Icon(Icons.replay_rounded),
                 label: Text(
-                    _isReordering ? 'Reordering...' : 'Reorder Same Items'),
+                  _isReordering ? 'Reordering...' : 'Reorder Same Items',
+                ),
               ),
               if (_isPendingStatus(order.orderStatus)) ...[
-                const SizedBox(height: 10),
-                FilledButton.icon(
-                  onPressed:
-                      _isCancelling ? null : () => _handleCancelOrder(order),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFDC2626),
-                    foregroundColor: Colors.white,
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7F8),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFFE4E6)),
                   ),
-                  icon: _isCancelling
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.cancel_outlined),
-                  label: Text(_isCancelling ? 'Cancelling...' : 'Cancel Order'),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Changed your mind?',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: const Color(0xFF9F1239),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: _isCancelling
+                            ? null
+                            : () => _handleCancelOrder(order),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFE4E6),
+                          foregroundColor: const Color(0xFF9F1239),
+                          elevation: 0,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: _isCancelling
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF9F1239),
+                                ),
+                              )
+                            : const Icon(Icons.cancel_outlined),
+                        label: Text(_isCancelling ? 'Cancelling...' : 'Cancel'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
               if (!canReorder)

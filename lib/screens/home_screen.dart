@@ -15,13 +15,41 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
   final _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    // Load initial items only if empty
+    Future.microtask(() {
+      final currentState = ref.read(itemsPaginationProvider);
+      if (currentState.items.isEmpty && !currentState.isLoading) {
+        final selectedCategory = ref.read(selectedCategoryProvider);
+        ref.read(itemsPaginationProvider.notifier).loadInitial(category: selectedCategory);
+      }
+    });
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      ref.read(itemsPaginationProvider.notifier).loadMore();
+    }
   }
 
   String _displayCategoryTitle(String? selectedCategory) {
@@ -295,19 +323,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Must call for AutomaticKeepAliveClientMixin
     final selectedCategory = ref.watch(selectedCategoryProvider);
-    final itemsAsync = ref.watch(filteredItemsProvider);
+    final paginationState = ref.watch(itemsPaginationProvider);
+    final searchQuery = ref.watch(searchQueryProvider);
+    final priceRange = ref.watch(priceRangeProvider);
+
+    // Apply local filters on paginated items
+    var displayItems = paginationState.items;
+    if (searchQuery.isNotEmpty) {
+      displayItems = displayItems
+          .where((item) =>
+              item.itemName.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+    if (priceRange != null) {
+      final (minPrice, maxPrice) = priceRange;
+      displayItems = displayItems
+          .where((item) => item.price >= minPrice && item.price <= maxPrice)
+          .toList();
+    }
 
     return SafeArea(
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF2E8), Color(0xFFFFFBF7)],
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(itemsPaginationProvider.notifier).refresh();
+          ref.invalidate(instantReadyItemsProvider);
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFFFF2E8), Color(0xFFFFFBF7)],
+            ),
           ),
-        ),
-        child: CustomScrollView(
+          child: CustomScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(
               child: Column(
@@ -462,7 +515,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 selectedCategory: selectedCategory,
                 onCategorySelected: (category) {
                   ref.read(selectedCategoryProvider.notifier).state = category;
-                  ref.invalidate(filteredItemsProvider);
+                  ref.read(itemsPaginationProvider.notifier).changeCategory(category);
                 },
               ),
             ),
@@ -547,178 +600,201 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             SliverToBoxAdapter(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  ref.invalidate(filteredItemsProvider);
-                  ref.invalidate(instantReadyItemsProvider);
-                },
-                child: itemsAsync.when(
-                  skipLoadingOnRefresh: false,
-                  loading: () => const _HomeItemsSkeleton(),
-                  error: (error, _) => Container(
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE4E6),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      'Unable to load items: $error',
-                      style: const TextStyle(
-                          color: Color(0xFF9F1239),
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  data: (items) {
-                    if (items.isEmpty) {
-                      final searchQuery = ref.watch(searchQueryProvider);
-                      return Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 24),
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFFFF5A1F).withOpacity(0.1),
-                              const Color(0xFFFF8C42).withOpacity(0.1),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFFFE4D6),
-                            width: 2,
-                          ),
-                        ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFFFF5A1F).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(
-                                  searchQuery.isNotEmpty
-                                      ? Icons.search_off_rounded
-                                      : Icons.restaurant_menu_rounded,
-                                  size: 56,
-                                  color: const Color(0xFFFF5A1F),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                searchQuery.isNotEmpty
-                                    ? 'No Results Found'
-                                    : 'No Items Available',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF0F172A),
-                                    ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                searchQuery.isNotEmpty
-                                    ? 'We couldn\'t find "$searchQuery" in our menu. Try searching for something else!'
-                                    : 'The canteen is currently restocking. Check back soon!',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: const Color(0xFF64748B),
-                                      height: 1.5,
-                                    ),
-                              ),
-                              if (searchQuery.isNotEmpty) ...[
-                                const SizedBox(height: 20),
-                                FilledButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _searchController.clear();
-                                    });
-                                    ref
-                                        .read(searchQueryProvider.notifier)
-                                        .state = '';
-                                  },
-                                  icon: const Icon(Icons.clear_rounded),
-                                  label: const Text('Clear Search'),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF5A1F),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    return Column(
-                      children: List.generate(items.length, (index) {
-                        final item = items[index];
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: ItemCard(
-                            item: item,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ItemDetailScreen(item: item),
-                                ),
-                              );
-                            },
-                            onAdd: () async {
-                              try {
-                                await ref
-                                    .read(cartProvider.notifier)
-                                    .addToCart(item.itemId);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          '${item.itemName} added to cart'),
-                                      backgroundColor: const Color(0xFF15803D),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('Failed to add to cart: $e'),
-                                      backgroundColor: const Color(0xFFB91C1C),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                        );
-                      }),
-                    );
-                  },
-                ),
-              ),
+              child: _buildItemsList(displayItems, paginationState),
             ),
           ],
         ),
       ),
+      ),
     );
+  }
+
+  Widget _buildItemsList(List<dynamic> items, ItemsPaginationState state) {
+    if (state.isLoading && items.isEmpty) {
+      return const _HomeItemsSkeleton();
+    }
+
+    if (state.error != null && items.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFE4E6),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          'Unable to load items: ${state.error}',
+          style: const TextStyle(
+              color: Color(0xFF9F1239), fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+
+    if (items.isEmpty) {
+      final searchQuery = ref.watch(searchQueryProvider);
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFFFF5A1F).withOpacity(0.1),
+              const Color(0xFFFF8C42).withOpacity(0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFFFE4D6),
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5A1F).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  searchQuery.isNotEmpty
+                      ? Icons.search_off_rounded
+                      : Icons.restaurant_menu_rounded,
+                  size: 56,
+                  color: const Color(0xFFFF5A1F),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                searchQuery.isNotEmpty ? 'No Results Found' : 'No Items Available',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                searchQuery.isNotEmpty
+                    ? 'We couldn\'t find "$searchQuery" in our menu. Try searching for something else!'
+                    : 'The canteen is currently restocking. Check back soon!',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF64748B),
+                      height: 1.5,
+                    ),
+              ),
+              if (searchQuery.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _searchController.clear();
+                    });
+                    ref.read(searchQueryProvider.notifier).state = '';
+                  },
+                  icon: const Icon(Icons.clear_rounded),
+                  label: const Text('Clear Search'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5A1F),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    final children = List.generate(items.length, (index) {
+      final item = items[index];
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: ItemCard(
+          item: item,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ItemDetailScreen(item: item),
+              ),
+            );
+          },
+          onAdd: () async {
+            try {
+              await ref.read(cartProvider.notifier).addToCart(item.itemId);
+              // Refresh cart to show updated data when user switches to cart
+              ref.invalidate(cartProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '${item.itemName} added to cart',
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: const Color(0xFF15803D),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(16),
+                    duration: const Duration(milliseconds: 1500),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Unable to add item to cart',
+                            style: TextStyle(fontSize: 15),
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: const Color(0xFFDC2626),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
+              }
+            }
+          },
+        ),
+      );
+    });
+
+    // Add loading indicator at bottom if loading more
+    if (state.isLoading && items.isNotEmpty) {
+      children.add(
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    return Column(children: children);
   }
 }
 

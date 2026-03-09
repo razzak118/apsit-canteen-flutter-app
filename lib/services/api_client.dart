@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -20,7 +21,7 @@ class ApiClient {
   final http.Client _http;
   final TokenStorageService _tokenStorage;
   final Future<void> Function()? onUnauthorized;
-  bool _isRefreshing = false;
+  Completer<void>? _refreshCompleter;
 
   ApiClient({
     http.Client? httpClient,
@@ -75,61 +76,79 @@ class ApiClient {
 
     // Handle 401 with token refresh
     if (response.statusCode == 401 && authRequired && !isRetry && path != '/auth/refresh-jwt') {
-      if (!_isRefreshing) {
-        _isRefreshing = true;
+      // If refresh is already in progress, wait for it to complete
+      if (_refreshCompleter != null) {
         try {
-          // Try to refresh the token
-          final refreshToken = await _tokenStorage.getRefreshToken();
-          if (refreshToken != null && refreshToken.isNotEmpty) {
-            final refreshResponse = await _http.post(
-              Uri.parse('${ApiConfig.baseUrl}/auth/refresh-jwt'),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-              body: jsonEncode({'refreshToken': refreshToken}),
-            );
-
-            if (refreshResponse.statusCode == 200) {
-              final refreshData = jsonDecode(refreshResponse.body);
-              final newJwt = refreshData['jwt'] as String;
-              final newRefreshToken = refreshData['refreshToken'] as String?;
-              
-              await _tokenStorage.saveJwt(newJwt);
-              if (newRefreshToken != null) {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('refresh_token', newRefreshToken);
-              }
-              
-              _isRefreshing = false;
-
-              // Retry original request with new token
-              return await _send(
-                method: method,
-                path: path,
-                body: body,
-                authRequired: authRequired,
-                isRetry: true,
-              );
-            }
-          }
+          await _refreshCompleter!.future;
+          // Retry request with new token
+          return await _send(
+            method: method,
+            path: path,
+            body: body,
+            authRequired: authRequired,
+            isRetry: true,
+          );
         } catch (e) {
-          _isRefreshing = false;
-          // Refresh failed, trigger logout
+          // Refresh failed for another request, propagate error
           await onUnauthorized?.call();
           throw const ApiException('Session expired. Please login again.', statusCode: 401);
         }
-        _isRefreshing = false;
-      } else {
-        // Wait a bit if refresh is in progress
-        await Future.delayed(const Duration(milliseconds: 100));
-        return await _send(
-          method: method,
-          path: path,
-          body: body,
-          authRequired: authRequired,
-          isRetry: isRetry,
-        );
+      }
+
+      // Start new refresh
+      _refreshCompleter = Completer<void>();
+      try {
+        // Try to refresh the token
+        final refreshToken = await _tokenStorage.getRefreshToken();
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          final refreshResponse = await _http.post(
+            Uri.parse('${ApiConfig.baseUrl}/auth/refresh-jwt'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'refreshToken': refreshToken}),
+          );
+
+          if (refreshResponse.statusCode == 200) {
+            final refreshData = jsonDecode(refreshResponse.body);
+            final newJwt = refreshData['jwt'] as String;
+            final newRefreshToken = refreshData['refreshToken'] as String?;
+            
+            await _tokenStorage.saveJwt(newJwt);
+            if (newRefreshToken != null) {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('refresh_token', newRefreshToken);
+            }
+            
+            _refreshCompleter!.complete();
+            _refreshCompleter = null;
+
+            // Retry original request with new token
+            return await _send(
+              method: method,
+              path: path,
+              body: body,
+              authRequired: authRequired,
+              isRetry: true,
+            );
+          }
+        }
+        
+        // Refresh failed
+        _refreshCompleter!.completeError(const ApiException('Token refresh failed'));
+        _refreshCompleter = null;
+        await onUnauthorized?.call();
+        throw const ApiException('Session expired. Please login again.', statusCode: 401);
+      } catch (e) {
+        // Complete with error so waiting requests fail too
+        if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+          _refreshCompleter!.completeError(e);
+        }
+        _refreshCompleter = null;
+        // Refresh failed, trigger logout
+        await onUnauthorized?.call();
+        throw const ApiException('Session expired. Please login again.', statusCode: 401);
       }
     }
 

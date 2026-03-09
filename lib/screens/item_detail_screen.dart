@@ -98,12 +98,28 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                                             await ref
                                                 .read(cartProvider.notifier)
                                                 .addToCart(widget.item.itemId);
+                                            // Refresh cart to show updated data when user switches to cart
+                                            ref.invalidate(cartProvider);
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
-                                                  content: Text('${widget.item.itemName} added to cart'),
-                                                  backgroundColor: Colors.green,
+                                                  content: Row(
+                                                    children: [
+                                                      const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                                                      const SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: Text(
+                                                          '${widget.item.itemName} added to cart',
+                                                          style: const TextStyle(fontSize: 15),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  backgroundColor: const Color(0xFF15803D),
                                                   behavior: SnackBarBehavior.floating,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                  margin: const EdgeInsets.all(16),
+                                                  duration: const Duration(milliseconds: 1500),
                                                 ),
                                               );
                                             }
@@ -111,9 +127,22 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
-                                                  content: Text('Failed to add to cart: $e'),
-                                                  backgroundColor: Colors.red,
+                                                  content: const Row(
+                                                    children: [
+                                                      Icon(Icons.error_outline, color: Colors.white, size: 20),
+                                                      SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Unable to add item to cart',
+                                                          style: TextStyle(fontSize: 15),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  backgroundColor: const Color(0xFFDC2626),
                                                   behavior: SnackBarBehavior.floating,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                  margin: const EdgeInsets.all(16),
                                                 ),
                                               );
                                             }

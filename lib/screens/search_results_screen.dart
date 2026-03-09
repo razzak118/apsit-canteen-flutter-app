@@ -283,11 +283,28 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                               onAdd: () async {
                                 try {
                                   await ref.read(cartProvider.notifier).addToCart(item.itemId);
+                                  // Refresh cart to show updated data when user switches to cart
+                                  ref.invalidate(cartProvider);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('${item.itemName} added to cart'),
+                                        content: Row(
+                                          children: [
+                                            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                '${item.itemName} added to cart',
+                                                style: const TextStyle(fontSize: 15),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                         backgroundColor: const Color(0xFF15803D),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        margin: const EdgeInsets.all(16),
+                                        duration: const Duration(milliseconds: 1500),
                                       ),
                                     );
                                   }
@@ -295,8 +312,22 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Failed to add to cart: $e'),
-                                        backgroundColor: const Color(0xFFB91C1C),
+                                        content: const Row(
+                                          children: [
+                                            Icon(Icons.error_outline, color: Colors.white, size: 20),
+                                            SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                'Unable to add item to cart',
+                                                style: TextStyle(fontSize: 15),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        backgroundColor: const Color(0xFFDC2626),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        margin: const EdgeInsets.all(16),
                                       ),
                                     );
                                   }

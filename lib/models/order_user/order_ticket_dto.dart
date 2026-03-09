@@ -9,6 +9,7 @@ class OrderTicketDto {
   final String createdAt;
   final String? completedAt;
   final String? updatedAt;
+  final String? orderUuid;
 
   const OrderTicketDto({
     this.orderId,
@@ -19,6 +20,7 @@ class OrderTicketDto {
     required this.createdAt,
     this.completedAt,
     this.updatedAt,
+    this.orderUuid,
   });
 
   factory OrderTicketDto.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,8 @@ class OrderTicketDto {
       createdAt: json['createdAt'] as String,
       completedAt: json['completedAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
+      orderUuid: (json['orderUuid'] ?? json['orderToken'] ?? json['token'])
+          as String?,
     );
   }
 
@@ -50,6 +54,7 @@ class OrderTicketDto {
       'createdAt': createdAt,
       'completedAt': completedAt,
       'updatedAt': updatedAt,
+      'orderUuid': orderUuid,
     };
   }
 }
