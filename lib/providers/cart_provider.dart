@@ -23,7 +23,7 @@ class CartNotifier extends AsyncNotifier<CartDto> {
       _debounceTimers.clear();
       _pendingChanges.clear();
     });
-    
+
     return ref.read(cartServiceProvider).getMyCart();
   }
 
@@ -75,30 +75,38 @@ class CartNotifier extends AsyncNotifier<CartDto> {
     if (currentState == null) return;
 
     // Step 1: OPTIMISTIC UI UPDATE - Update immediately on screen
-    final updatedItems = currentState.cartItems.map((item) {
-      if (item.cartItemId == cartItemId) {
-        final newQuantity = item.quantity + change;
-        if (newQuantity <= 0) {
-          return null; // Mark for removal
-        }
-        final newPrice = item.menuItem.price * newQuantity;
-        return item.copyWith(
-          quantity: newQuantity,
-          cartItemPrice: newPrice.toDouble(),
-        );
-      }
-      return item;
-    }).whereType<CartItemDto>().toList();
+    final updatedItems = currentState.cartItems
+        .map((item) {
+          if (item.cartItemId == cartItemId) {
+            final newQuantity = item.quantity + change;
+            if (newQuantity <= 0) {
+              return null; // Mark for removal
+            }
+            final newPrice = item.menuItem.price * newQuantity;
+            return item.copyWith(
+              quantity: newQuantity,
+              cartItemPrice: newPrice.toDouble(),
+            );
+          }
+          return item;
+        })
+        .whereType<CartItemDto>()
+        .toList();
 
     final newTotal = updatedItems.fold<double>(
       0,
       (sum, item) => sum + item.cartItemPrice,
+    );
+    final newEstPrepTime = updatedItems.fold<int>(
+      0,
+      (sum, item) => sum + (item.menuItem.readyIn * item.quantity),
     );
 
     state = AsyncData(
       currentState.copyWith(
         cartItems: updatedItems,
         totalCartPrice: newTotal,
+        estPrepTime: newEstPrepTime,
       ),
     );
 
