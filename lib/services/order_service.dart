@@ -24,4 +24,25 @@ class OrderService {
   Future<void> cancelOrder(int orderId) async {
     await _apiClient.post('/order/cancel-order/$orderId');
   }
+
+  Future<int> getOrderWaitTime(int orderId) async {
+    final response = await _apiClient.get('/order/$orderId/checkWaitTime');
+    return _toInt(response);
+  }
+
+  Future<int> getTotalQueueWaitTime() async {
+    final response = await _apiClient.get('/order/wait-time');
+    return _toInt(response);
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.round();
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is Map<String, dynamic>) {
+      final raw = value['waitTime'] ?? value['minutes'] ?? value['value'];
+      return _toInt(raw);
+    }
+    return 0;
+  }
 }

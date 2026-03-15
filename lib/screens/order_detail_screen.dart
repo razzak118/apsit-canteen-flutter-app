@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -24,11 +26,20 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   late Future<OrderTicketDto> _detailFuture;
   bool _isReordering = false;
   bool _isCancelling = false;
+  Timer? _liveOrderTimer;
+  int? _liveWaitTimeMinutes;
 
   @override
   void initState() {
     super.initState();
     _detailFuture = _loadOrderDetails();
+    _startLiveOrderPolling();
+  }
+
+  @override
+  void dispose() {
+    _liveOrderTimer?.cancel();
+    super.dispose();
   }
 
   Future<OrderTicketDto> _loadOrderDetails() async {
@@ -41,6 +52,41 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     } catch (_) {
       // Fallback to existing data if detail endpoint fails.
       return widget.order;
+    }
+  }
+
+  void _startLiveOrderPolling() {
+    _liveOrderTimer?.cancel();
+    _refreshLiveOrderData();
+    _liveOrderTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _refreshLiveOrderData(),
+    );
+  }
+
+  Future<void> _refreshLiveOrderData() async {
+    final orderId = widget.order.orderId;
+    if (orderId == null) return;
+
+    try {
+      final latestOrder = await ref.read(orderServiceProvider).getOrderDetails(orderId);
+      int? wait;
+      if (_isQueueStatus(latestOrder.orderStatus)) {
+        wait = await ref.read(orderServiceProvider).getOrderWaitTime(orderId);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _detailFuture = Future<OrderTicketDto>.value(latestOrder);
+        _liveWaitTimeMinutes = wait;
+      });
+
+      final terminal = _isTerminalStatus(latestOrder.orderStatus);
+      if (terminal && _liveOrderTimer?.isActive == true) {
+        _liveOrderTimer?.cancel();
+      }
+    } catch (_) {
+      // Keep existing UI state when polling fails.
     }
   }
 
@@ -71,14 +117,47 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'CONFIRMED':
+    switch (status.trim().toUpperCase()) {
+      case 'DELIVERED':
         return const Color(0xFF16A34A);
       case 'CANCELLED':
         return const Color(0xFFDC2626);
-      default:
+      case 'READY':
+        return const Color(0xFF2563EB);
+      case 'IN_PROGRESS':
         return const Color(0xFFEA580C);
+      case 'PENDING':
+        return const Color(0xFF7C3AED);
+      default:
+        return const Color(0xFF64748B);
     }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.trim().toUpperCase()) {
+      case 'IN_PROGRESS':
+        return 'IN PROGRESS';
+      default:
+        return status.trim().toUpperCase();
+    }
+  }
+
+  bool _isQueueStatus(String status) {
+    final normalized = status.trim().toUpperCase();
+    return normalized == 'PENDING' || normalized == 'IN_PROGRESS';
+  }
+
+  bool _isTerminalStatus(String status) {
+    final normalized = status.trim().toUpperCase();
+    return normalized == 'CANCELLED' || normalized == 'DELIVERED';
+  }
+
+  String _formatWaitTime(int minutes) {
+    if (minutes <= 0) return 'Ready soon';
+    if (minutes < 60) return '$minutes min';
+    final hr = minutes ~/ 60;
+    final min = minutes % 60;
+    return min == 0 ? '$hr hr' : '$hr hr $min min';
   }
 
   bool _isPendingStatus(String status) {
@@ -116,6 +195,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           .guard(() => ref.read(orderServiceProvider).reOrder(orderId));
       ref.invalidate(cartProvider);
       ref.invalidate(myOrdersProvider);
+        ref.invalidate(ordersPaginationProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -185,6 +265,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           .guard(() => ref.read(orderServiceProvider).cancelOrder(orderId));
 
       ref.invalidate(myOrdersProvider);
+        ref.invalidate(ordersPaginationProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -277,6 +358,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
           final order = snapshot.data ?? widget.order;
           final normalizedStatus = order.orderStatus.trim().toUpperCase();
+            final liveEta = _isQueueStatus(normalizedStatus)
+              ? ((_liveWaitTimeMinutes != null && _liveWaitTimeMinutes! >= 0)
+                ? _liveWaitTimeMinutes!
+                : order.estPrepTime)
+              : null;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -308,7 +394,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            order.orderStatus,
+                            _statusLabel(order.orderStatus),
                             style: TextStyle(
                               color: _statusColor(order.orderStatus),
                               fontWeight: FontWeight.w700,
@@ -329,6 +415,43 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       'Placed at: ${_formatDate(context, order.createdAt)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
+                    if (liveEta != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.schedule_rounded,
+                              size: 18,
+                              color: Color(0xFF1D4ED8),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Estimated wait time: ${_formatWaitTime(liveEta)}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: const Color(0xFF1E3A8A),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

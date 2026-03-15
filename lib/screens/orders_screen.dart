@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order_user/order_ticket_dto.dart';
 import '../providers/order_profile_providers.dart';
+import '../providers/service_providers.dart';
 import '../widgets/skeleton_box.dart';
 import 'order_detail_screen.dart';
 import '../widgets/glass_card.dart';
@@ -17,6 +20,9 @@ class OrdersScreen extends ConsumerStatefulWidget {
 class _OrdersScreenState extends ConsumerState<OrdersScreen>
     with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
+  Timer? _queueTimer;
+  int? _totalQueueWaitTime;
+  final Map<int, int> _orderWaitTimes = {};
 
   @override
   bool get wantKeepAlive => true;
@@ -25,6 +31,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _refreshQueueSummary();
+    _refreshActiveOrderWaitTimes();
+    _queueTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) async {
+        await _refreshQueueSummary();
+        await _refreshActiveOrderWaitTimes();
+      },
+    );
     // Load initial data only if empty
     Future.microtask(() {
       final currentState = ref.read(ordersPaginationProvider);
@@ -38,7 +53,57 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _queueTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _refreshQueueSummary() async {
+    try {
+      final wait = await ref.read(orderServiceProvider).getTotalQueueWaitTime();
+      if (!mounted) return;
+      setState(() {
+        _totalQueueWaitTime = wait;
+      });
+    } catch (_) {
+      // Keep old value silently.
+    }
+  }
+
+  Future<void> _refreshActiveOrderWaitTimes() async {
+    final state = ref.read(ordersPaginationProvider);
+    final activeOrders = state.orders.where((order) {
+      final status = order.orderStatus.trim().toUpperCase();
+      return status == 'PENDING' || status == 'IN_PROGRESS';
+    }).toList();
+
+    if (activeOrders.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _orderWaitTimes.clear();
+      });
+      return;
+    }
+
+    final futures = activeOrders
+        .where((order) => order.orderId != null)
+        .map((order) async {
+          final orderId = order.orderId!;
+          final wait = await ref.read(orderServiceProvider).getOrderWaitTime(orderId);
+          return MapEntry(orderId, wait);
+        })
+        .toList();
+
+    try {
+      final entries = await Future.wait(futures);
+      if (!mounted) return;
+      setState(() {
+        _orderWaitTimes
+          ..clear()
+          ..addEntries(entries);
+      });
+    } catch (_) {
+      // Ignore single refresh failures; next poll will retry.
+    }
   }
 
   void _onScroll() {
@@ -83,6 +148,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   Widget _orderCard(BuildContext context, OrderTicketDto order) {
+    final normalizedStatus = order.orderStatus.trim().toUpperCase();
+    final activeQueueOrder =
+        normalizedStatus == 'PENDING' || normalizedStatus == 'IN_PROGRESS';
+    final liveWait = order.orderId == null ? null : _orderWaitTimes[order.orderId!];
+
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +178,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  order.orderStatus,
+                  _statusLabel(order.orderStatus),
                   style: TextStyle(
                     color: _statusColor(order.orderStatus),
                     fontWeight: FontWeight.w700,
@@ -118,6 +188,41 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
               ),
             ],
           ),
+          if (activeQueueOrder) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 18,
+                    color: Color(0xFF1D4ED8),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      liveWait == null
+                          ? 'Estimated wait: Fetching live ETA...'
+                          : liveWait < 0
+                              ? 'Estimated wait: Finalizing...'
+                              : 'Estimated wait: ${_formatWaitTime(liveWait)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF1E3A8A),
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             'Placed at: ${_formatPlacedAt(context, order.createdAt)}',
@@ -166,14 +271,37 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   Color _statusColor(String status) {
-    switch (status) {
-      case 'CONFIRMED':
+    switch (status.trim().toUpperCase()) {
+      case 'DELIVERED':
         return const Color(0xFF16A34A);
       case 'CANCELLED':
         return const Color(0xFFDC2626);
-      default:
+      case 'READY':
+        return const Color(0xFF2563EB);
+      case 'IN_PROGRESS':
         return const Color(0xFFEA580C);
+      case 'PENDING':
+        return const Color(0xFF7C3AED);
+      default:
+        return const Color(0xFF64748B);
     }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.trim().toUpperCase()) {
+      case 'IN_PROGRESS':
+        return 'IN PROGRESS';
+      default:
+        return status.trim().toUpperCase();
+    }
+  }
+
+  String _formatWaitTime(int minutes) {
+    if (minutes <= 0) return 'Ready soon';
+    if (minutes < 60) return '$minutes min';
+    final hr = minutes ~/ 60;
+    final min = minutes % 60;
+    return min == 0 ? '$hr hr' : '$hr hr $min min';
   }
 
   @override
@@ -186,7 +314,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         appBar: AppBar(title: const Text('My Orders')),
         body: RefreshIndicator(
           onRefresh: () async {
+            await _refreshQueueSummary();
             await ref.read(ordersPaginationProvider.notifier).refresh();
+            await _refreshActiveOrderWaitTimes();
           },
           child: _buildOrdersList(paginationState),
         ),
@@ -195,6 +325,19 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   Widget _buildOrdersList(OrdersPaginationState state) {
+    if (!state.isLoading && state.orders.isNotEmpty) {
+      final needsLiveEta = state.orders.any((order) {
+        final status = order.orderStatus.trim().toUpperCase();
+        if (status != 'PENDING' && status != 'IN_PROGRESS') return false;
+        final id = order.orderId;
+        return id != null && !_orderWaitTimes.containsKey(id);
+      });
+
+      if (needsLiveEta) {
+        Future.microtask(_refreshActiveOrderWaitTimes);
+      }
+    }
+
     if (state.isLoading && state.orders.isEmpty) {
       return ListView(
         controller: _scrollController,
@@ -301,6 +444,69 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     }
 
     final children = <Widget>[];
+
+    final hasActiveOrders = state.orders.any((order) {
+      final status = order.orderStatus.trim().toUpperCase();
+      return status == 'PENDING' || status == 'IN_PROGRESS' || status == 'READY';
+    });
+
+    if (hasActiveOrders) {
+      children.add(
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE0F2FE), Color(0xFFECFDF5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFBAE6FD)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.speed_rounded,
+                  color: Color(0xFF0369A1),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Live Queue Insight',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _totalQueueWaitTime == null
+                          ? 'Fetching queue estimate...'
+                          : 'Current overall queue wait: ${_formatWaitTime(_totalQueueWaitTime!)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF0F172A),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     for (final entry in grouped.entries) {
       if (entry.value.isEmpty) continue;
 
