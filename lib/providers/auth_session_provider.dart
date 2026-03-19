@@ -2,11 +2,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/auth/login_request_dto.dart';
 import '../models/auth/signup_request_dto.dart';
+import 'cart_provider.dart';
 import 'home_providers.dart';
+import 'navigation_provider.dart';
+import 'order_profile_providers.dart';
 import 'service_providers.dart';
 import 'transaction_provider.dart';
 
 class AuthSessionNotifier extends AsyncNotifier<bool> {
+  void _resetUserScopedState() {
+    ref.invalidate(allItemsProvider);
+    ref.invalidate(filteredItemsProvider);
+    ref.invalidate(instantReadyItemsProvider);
+    ref.invalidate(itemsPaginationProvider);
+    ref.invalidate(selectedCategoryProvider);
+    ref.invalidate(searchQueryProvider);
+    ref.invalidate(priceRangeProvider);
+
+    ref.invalidate(cartProvider);
+    ref.invalidate(myOrdersProvider);
+    ref.invalidate(ordersPaginationProvider);
+    ref.invalidate(myProfileProvider);
+
+    ref.read(mainNavigationIndexProvider.notifier).state = 0;
+  }
+
   @override
   Future<bool> build() async {
     final jwt = await ref.read(tokenStorageServiceProvider).getJwt();
@@ -17,16 +37,14 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
     required String username,
     required String password,
   }) async {
-    // Don't set state to loading - let the UI handle loading indicator
+    state = const AsyncLoading();
+
     final result = await ref.read(transactionCounterProvider.notifier).guard(
           () => AsyncValue.guard(() async {
             await ref.read(authServiceProvider).login(
                   LoginRequestDto(username: username, password: password),
                 );
-            // Invalidate all items providers to fetch with new JWT token
-            ref.invalidate(allItemsProvider);
-            ref.invalidate(filteredItemsProvider);
-            ref.invalidate(instantReadyItemsProvider);
+            _resetUserScopedState();
             return true;
           }),
         );
@@ -60,14 +78,13 @@ class AuthSessionNotifier extends AsyncNotifier<bool> {
   }
 
   Future<void> logout() async {
+    state = const AsyncLoading();
+
     await ref
         .read(transactionCounterProvider.notifier)
         .guard(() => ref.read(authServiceProvider).logout());
-    // Invalidate all data providers on logout
-    ref.invalidate(allItemsProvider);
-    ref.invalidate(filteredItemsProvider);
-    ref.invalidate(instantReadyItemsProvider);
-    ref.invalidate(selectedCategoryProvider);
+
+    _resetUserScopedState();
     state = const AsyncData(false);
   }
 

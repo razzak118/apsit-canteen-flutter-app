@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_session_provider.dart';
-import '../providers/cart_provider.dart';
-import '../providers/home_providers.dart';
 import '../providers/order_profile_providers.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/skeleton_box.dart';
@@ -85,10 +83,6 @@ class ProfileScreen extends ConsumerWidget {
                   FilledButton.tonalIcon(
                     onPressed: () async {
                       await ref.read(authSessionProvider.notifier).logout();
-                      ref.invalidate(myProfileProvider);
-                      ref.invalidate(myOrdersProvider);
-                      ref.invalidate(cartProvider);
-                      ref.invalidate(allItemsProvider);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
