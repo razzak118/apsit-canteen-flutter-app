@@ -1,12 +1,23 @@
+import 'package:event_bus/event_bus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
 import '../services/item_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/order_service.dart';
+import '../services/order_updates_socket_service.dart';
 import '../services/token_storage_service.dart';
 import '../services/user_service.dart';
 import 'auth_session_provider.dart';
+
+final eventBusProvider = Provider<EventBus>((ref) {
+  return EventBus();
+});
+
+final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
+  return LocalNotificationService();
+});
 
 final tokenStorageServiceProvider = Provider<TokenStorageService>((ref) {
   return TokenStorageService();
@@ -47,6 +58,13 @@ final orderServiceProvider = Provider<OrderService>((ref) {
       await ref.read(tokenStorageServiceProvider).clearAuth();
       ref.invalidate(authSessionProvider);
     },
+  );
+});
+
+final orderUpdatesSocketServiceProvider = Provider<OrderUpdatesSocketService>((ref) {
+  return OrderUpdatesSocketService(
+    tokenStorage: ref.read(tokenStorageServiceProvider),
+    eventBus: ref.read(eventBusProvider),
   );
 });
 

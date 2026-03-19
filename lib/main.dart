@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_session_provider.dart';
+import 'providers/order_realtime_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'widgets/global_loading_overlay.dart';
@@ -75,6 +76,7 @@ class AppEntryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(orderRealtimeLifecycleProvider);
     final authState = ref.watch(authSessionProvider);
 
     return authState.when(

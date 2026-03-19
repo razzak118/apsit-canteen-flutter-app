@@ -19,6 +19,7 @@ class OrdersPaginationState {
   final int currentPage;
   final bool isLoading;
   final bool hasMore;
+  final bool hasFetchedOnce;
   final String? error;
 
   OrdersPaginationState({
@@ -26,6 +27,7 @@ class OrdersPaginationState {
     required this.currentPage,
     required this.isLoading,
     required this.hasMore,
+    required this.hasFetchedOnce,
     this.error,
   });
 
@@ -34,6 +36,7 @@ class OrdersPaginationState {
     int? currentPage,
     bool? isLoading,
     bool? hasMore,
+    bool? hasFetchedOnce,
     String? error,
   }) {
     return OrdersPaginationState(
@@ -41,6 +44,7 @@ class OrdersPaginationState {
       currentPage: currentPage ?? this.currentPage,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
+      hasFetchedOnce: hasFetchedOnce ?? this.hasFetchedOnce,
       error: error ?? this.error,
     );
   }
@@ -56,6 +60,7 @@ class OrdersPaginationNotifier extends StateNotifier<OrdersPaginationState> {
           currentPage: 0,
           isLoading: false,
           hasMore: true,
+          hasFetchedOnce: false,
         ));
 
   Future<void> loadInitial() async {
@@ -64,6 +69,7 @@ class OrdersPaginationNotifier extends StateNotifier<OrdersPaginationState> {
       currentPage: 0,
       isLoading: true,
       hasMore: true,
+      hasFetchedOnce: false,
     );
 
     try {
@@ -73,10 +79,12 @@ class OrdersPaginationNotifier extends StateNotifier<OrdersPaginationState> {
         currentPage: 0,
         isLoading: false,
         hasMore: !response.last,
+        hasFetchedOnce: true,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
+        hasFetchedOnce: true,
         error: e.toString(),
       );
     }
@@ -96,6 +104,7 @@ class OrdersPaginationNotifier extends StateNotifier<OrdersPaginationState> {
         currentPage: nextPage,
         isLoading: false,
         hasMore: !response.last,
+        hasFetchedOnce: true,
       );
     } catch (e) {
       state = state.copyWith(
@@ -107,6 +116,23 @@ class OrdersPaginationNotifier extends StateNotifier<OrdersPaginationState> {
 
   Future<void> refresh() async {
     await loadInitial();
+  }
+
+  void applyOrderUpdate(OrderTicketDto updatedOrder) {
+    final id = updatedOrder.orderId;
+    if (id == null) return;
+
+    final current = state.orders;
+    final index = current.indexWhere((order) => order.orderId == id);
+
+    if (index == -1) {
+      state = state.copyWith(orders: [updatedOrder, ...current]);
+      return;
+    }
+
+    final next = [...current];
+    next[index] = updatedOrder;
+    state = state.copyWith(orders: next);
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/order_user/order_ticket_dto.dart';
 import '../providers/order_profile_providers.dart';
+import '../providers/order_realtime_provider.dart';
 import '../providers/service_providers.dart';
 import '../widgets/skeleton_box.dart';
 import 'order_detail_screen.dart';
@@ -43,7 +44,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     // Load initial data only if empty
     Future.microtask(() {
       final currentState = ref.read(ordersPaginationProvider);
-      if (currentState.orders.isEmpty && !currentState.isLoading) {
+      if (!currentState.hasFetchedOnce && !currentState.isLoading) {
         ref.read(ordersPaginationProvider.notifier).loadInitial();
       }
     });
@@ -307,6 +308,27 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Must call for AutomaticKeepAliveClientMixin
+
+    ref.listen(orderStatusUpdatesProvider, (_, next) {
+      next.whenData((event) {
+        final order = event.order;
+        final orderId = order.orderId;
+        if (orderId == null) return;
+
+        ref.read(ordersPaginationProvider.notifier).applyOrderUpdate(order);
+
+        final status = order.orderStatus.trim().toUpperCase();
+        if (status == 'PENDING' || status == 'IN_PROGRESS') {
+          unawaited(_refreshActiveOrderWaitTimes());
+        } else {
+          if (!mounted) return;
+          setState(() {
+            _orderWaitTimes.remove(orderId);
+          });
+        }
+      });
+    });
+
     final paginationState = ref.watch(ordersPaginationProvider);
 
     return SafeArea(
@@ -325,6 +347,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   }
 
   Widget _buildOrdersList(OrdersPaginationState state) {
+    if (!state.hasFetchedOnce) {
+      return ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [_OrdersSkeleton()],
+      );
+    }
+
     if (!state.isLoading && state.orders.isNotEmpty) {
       final needsLiveEta = state.orders.any((order) {
         final status = order.orderStatus.trim().toUpperCase();

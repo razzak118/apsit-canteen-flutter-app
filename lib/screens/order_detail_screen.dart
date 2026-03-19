@@ -9,6 +9,7 @@ import '../models/order_user/order_ticket_dto.dart';
 import '../providers/cart_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/order_profile_providers.dart';
+import '../providers/order_realtime_provider.dart';
 import '../providers/service_providers.dart';
 import '../providers/transaction_provider.dart';
 import '../widgets/glass_card.dart';
@@ -334,6 +335,23 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(orderStatusUpdatesProvider, (_, next) {
+      next.whenData((event) {
+        final currentOrderId = widget.order.orderId;
+        if (currentOrderId == null || event.order.orderId != currentOrderId) {
+          return;
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _detailFuture = Future<OrderTicketDto>.value(event.order);
+          if (!_isQueueStatus(event.order.orderStatus)) {
+            _liveWaitTimeMinutes = null;
+          }
+        });
+      });
+    });
+
     final canReorder = widget.order.orderId != null;
 
     return Scaffold(
