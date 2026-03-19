@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_cart/item_dto.dart';
 import '../providers/cart_provider.dart';
 import '../providers/service_providers.dart';
+import '../utils/app_error_message.dart';
 import '../widgets/item_card.dart';
 import 'item_detail_screen.dart';
 
@@ -167,7 +168,10 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '${snapshot.error}',
+                                  appErrorMessage(
+                                    snapshot.error!,
+                                    fallback: 'Unable to search right now. Please try again.',
+                                  ),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(color: Color(0xFF9F1239)),
                               ),

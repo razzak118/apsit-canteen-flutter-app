@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:canteen_user_app/providers/order_profile_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import '../providers/cart_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/service_providers.dart';
 import '../providers/transaction_provider.dart';
+import '../utils/app_error_message.dart';
 import '../widgets/skeleton_box.dart';
 
 String _formatPrepTime(int minutes) {
@@ -51,7 +54,12 @@ class CartScreen extends ConsumerWidget {
         body: RefreshIndicator(
           onRefresh: () async {
             await ref.read(cartProvider.notifier).flushPendingQuantityUpdates();
-            await ref.read(cartProvider.notifier).refreshCart();
+            unawaited(
+              ref.read(cartProvider.notifier).refreshCart(showGlobalLoader: false),
+            );
+
+            // Hide pull indicator quickly once skeleton becomes visible.
+            await Future<void>.delayed(const Duration(milliseconds: 100));
           },
           child: cartAsync.when(
             skipLoadingOnRefresh: false,
@@ -59,83 +67,139 @@ class CartScreen extends ConsumerWidget {
             error: (error, _) => ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Unable to load cart: $error'),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(
+                            Icons.wifi_off_rounded,
+                            color: Color(0xFF475569),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Couldn\'t load your cart',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        appErrorMessage(error),
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
             data: (cart) {
               if (cart.cartItems.isEmpty) {
                 return ListView(
-                  padding: const EdgeInsets.all(16),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
-                    const SizedBox(height: 60),
+                    const SizedBox(height: 36),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 40),
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
                       decoration: BoxDecoration(
+                        color: Colors.white,
                         gradient: LinearGradient(
                           colors: [
-                            const Color(0xFFFF5A1F).withOpacity(0.1),
-                            const Color(0xFFFF8C42).withOpacity(0.1),
+                            const Color(0xFFFF5A1F).withOpacity(0.03),
+                            const Color(0xFFFF8C42).withOpacity(0.04),
                           ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: const Color(0xFFFFE4D6),
-                          width: 2,
+                          color: const Color(0xFFFFE9DE),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
                       child: Column(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF5A1F).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(16),
+                              color: const Color(0xFFFF5A1F).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Icon(
-                              Icons.shopping_cart_outlined,
-                              size: 56,
+                              Icons.shopping_bag_outlined,
+                              size: 26,
                               color: Color(0xFFFF5A1F),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 14),
                           Text(
-                            'Your Cart is Empty',
+                            'Your cart is empty',
                             style: Theme.of(context)
                                 .textTheme
-                                .headlineSmall
+                                .titleLarge
                                 ?.copyWith(
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   color: const Color(0xFF0F172A),
                                 ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           Text(
-                            'Explore our delicious menu and start adding items to your cart!',
+                            'Add items from the menu to get started.',
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
                                   color: const Color(0xFF64748B),
-                                  height: 1.5,
+                                  height: 1.35,
                                 ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Your selected dishes will appear here.',
+                            textAlign: TextAlign.center,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: const Color(0xFF94A3B8),
+                                    ),
+                          ),
+                          const SizedBox(height: 18),
                           FilledButton.icon(
                             onPressed: () {
                               ref
                                   .read(mainNavigationIndexProvider.notifier)
                                   .state = 0;
                             },
-                            icon: const Icon(Icons.restaurant_menu_rounded),
+                            icon: const Icon(Icons.restaurant_menu_rounded, size: 18),
                             label: const Text('Browse Menu'),
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFFF5A1F),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 14,
+                                horizontal: 24,
+                                vertical: 12,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -311,7 +375,11 @@ class CartScreen extends ConsumerWidget {
                                                     .showSnackBar(
                                                   SnackBar(
                                                     content: Text(
-                                                        'Failed to remove item: $e'),
+                                                      appErrorMessage(
+                                                        e,
+                                                        fallback: 'Unable to remove this item. Please try again.',
+                                                      ),
+                                                    ),
                                                     backgroundColor: Colors.red,
                                                   ),
                                                 );

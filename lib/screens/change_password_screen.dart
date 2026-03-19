@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/auth/change_password_request_dto.dart';
 import '../providers/service_providers.dart';
 import '../providers/transaction_provider.dart';
+import '../utils/app_error_message.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -61,7 +62,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to change password: $e'),
+            content: Text(
+              appErrorMessage(
+                e,
+                fallback: 'Unable to change password right now. Please try again.',
+              ),
+            ),
             backgroundColor: const Color(0xFFB91C1C),
           ),
         );

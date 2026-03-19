@@ -9,8 +9,10 @@ import '../providers/navigation_provider.dart';
 import '../providers/order_profile_providers.dart';
 import '../providers/order_realtime_provider.dart';
 import '../providers/service_providers.dart';
+import '../services/local_notification_service.dart';
 import 'cart_screen.dart';
 import 'home_screen.dart';
+import 'order_detail_screen.dart';
 import 'orders_screen.dart';
 import 'profile_screen.dart';
 
@@ -33,12 +35,41 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   late final ProviderSubscription<AsyncValue<OrderStatusUpdatedEvent>>
       _orderUpdatesSubscription;
 
+  Future<void> _handleNotificationTap(OrderNotificationPayload payload) async {
+    if (!mounted) return;
+
+    ref.read(mainNavigationIndexProvider.notifier).state = 2;
+
+    if (payload.normalizedStatus != 'READY' || payload.orderId == null) {
+      return;
+    }
+
+    try {
+      final order = await ref
+          .read(orderServiceProvider)
+          .getOrderDetails(payload.orderId!);
+
+      if (!mounted) return;
+
+      ref.read(ordersPaginationProvider.notifier).applyOrderUpdate(order);
+      ref.invalidate(myOrdersProvider);
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OrderDetailScreen(order: order),
+        ),
+      );
+    } catch (_) {
+      // Fallback stays on My Orders tab if latest details cannot be fetched.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() async {
       final notifier = ref.read(localNotificationServiceProvider);
-      await notifier.initialize();
+      await notifier.initialize(onNotificationTap: _handleNotificationTap);
       await notifier.requestPermissionIfNeeded();
     });
 

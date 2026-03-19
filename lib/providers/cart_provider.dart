@@ -27,14 +27,18 @@ class CartNotifier extends AsyncNotifier<CartDto> {
     return ref.read(cartServiceProvider).getMyCart();
   }
 
-  Future<void> refreshCart() async {
+  Future<void> refreshCart({bool showGlobalLoader = true}) async {
     await flushPendingQuantityUpdates();
     state = const AsyncLoading();
-    final nextState = await ref.read(transactionCounterProvider.notifier).guard(
-          () => AsyncValue.guard(
-            () => ref.read(cartServiceProvider).getMyCart(),
-          ),
+
+    final fetch = () => AsyncValue.guard(
+          () => ref.read(cartServiceProvider).getMyCart(),
         );
+
+    final nextState = showGlobalLoader
+        ? await ref.read(transactionCounterProvider.notifier).guard(fetch)
+        : await fetch();
+
     state = nextState;
   }
 

@@ -1,10 +1,61 @@
+import 'dart:convert';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+typedef NotificationTapHandler = Future<void> Function(
+  OrderNotificationPayload payload,
+);
+
+class OrderNotificationPayload {
+  final int? orderId;
+  final String status;
+
+  const OrderNotificationPayload({
+    required this.orderId,
+    required this.status,
+  });
+
+  String get normalizedStatus => status.trim().toUpperCase();
+
+  String toRawPayload() {
+    return jsonEncode({
+      'orderId': orderId,
+      'status': normalizedStatus,
+    });
+  }
+
+  static OrderNotificationPayload? tryParse(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      return null;
+    }
+
+    final rawStatus = decoded['status']?.toString();
+    if (rawStatus == null || rawStatus.trim().isEmpty) {
+      return null;
+    }
+
+    final rawOrderId = decoded['orderId'];
+    final parsedOrderId = rawOrderId == null
+        ? null
+        : int.tryParse(rawOrderId.toString());
+
+    return OrderNotificationPayload(
+      orderId: parsedOrderId,
+      status: rawStatus,
+    );
+  }
+}
 
 class LocalNotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+  String? _lastHandledTapPayload;
+  NotificationTapHandler? _onNotificationTap;
   final Map<int, String> _lastNotifiedStatusByOrderId = {};
 
   static const AndroidNotificationChannel _ordersChannel =
@@ -15,21 +66,45 @@ class LocalNotificationService {
     importance: Importance.high,
   );
 
-  Future<void> initialize() async {
+  Future<void> initialize({NotificationTapHandler? onNotificationTap}) async {
+    if (onNotificationTap != null) {
+      _onNotificationTap = onNotificationTap;
+    }
+
     if (_initialized) return;
 
     const androidInit =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: androidInit);
 
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (response) {
+        _handleNotificationTap(response.payload);
+      },
+    );
 
     final androidPlugin = _plugin
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(_ordersChannel);
 
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    final launchPayload = launchDetails?.notificationResponse?.payload;
+    await _handleNotificationTap(launchPayload);
+
     _initialized = true;
+  }
+
+  Future<void> _handleNotificationTap(String? rawPayload) async {
+    if (rawPayload == null || rawPayload.trim().isEmpty) return;
+    if (_lastHandledTapPayload == rawPayload) return;
+
+    final parsed = OrderNotificationPayload.tryParse(rawPayload);
+    if (parsed == null) return;
+
+    _lastHandledTapPayload = rawPayload;
+    await _onNotificationTap?.call(parsed);
   }
 
   Future<void> requestPermissionIfNeeded() async {
@@ -74,6 +149,10 @@ class LocalNotificationService {
     final title = _buildTitle(id, normalizedStatus);
     final body = _buildBody(id, normalizedStatus);
     final ticker = _buildTicker(normalizedStatus);
+    final payload = OrderNotificationPayload(
+      orderId: id,
+      status: normalizedStatus,
+    ).toRawPayload();
 
     final notificationId = DateTime.now().microsecondsSinceEpoch.remainder(2147483647);
 
@@ -101,6 +180,7 @@ class LocalNotificationService {
           ),
         ),
       ),
+      payload: payload,
     );
 
     return true;

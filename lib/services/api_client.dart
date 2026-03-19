@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,7 +15,7 @@ class ApiException implements Exception {
   const ApiException(this.message, {this.statusCode});
 
   @override
-  String toString() => 'ApiException(statusCode: $statusCode, message: $message)';
+  String toString() => message;
 }
 
 class ApiClient {
@@ -62,16 +63,34 @@ class ApiClient {
     final headers = await _buildHeaders(authRequired: authRequired);
 
     late http.Response response;
-    if (method == 'GET') {
-      response = await _http.get(uri, headers: headers);
-    } else if (method == 'POST') {
-      response = await _http.post(
-        uri,
-        headers: headers,
-        body: body == null ? null : jsonEncode(body),
+    try {
+      if (method == 'GET') {
+        response = await _http
+            .get(uri, headers: headers)
+            .timeout(const Duration(seconds: 20));
+      } else if (method == 'POST') {
+        response = await _http
+            .post(
+              uri,
+              headers: headers,
+              body: body == null ? null : jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 20));
+      } else {
+        throw const ApiException('Unsupported HTTP method');
+      }
+    } on TimeoutException {
+      throw const ApiException(
+        'Request timed out. Please check your connection and try again.',
       );
-    } else {
-      throw const ApiException('Unsupported HTTP method');
+    } on SocketException {
+      throw const ApiException(
+        'No internet connection. Please check your network and try again.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        'Network error. Please check your connection and try again.',
+      );
     }
 
     // Handle 401 with token refresh
@@ -89,9 +108,17 @@ class ApiClient {
             isRetry: true,
           );
         } catch (e) {
-          // Refresh failed for another request, propagate error
+          // Refresh failed for another request, propagate appropriate error.
+          if (_isConnectivityIssue(e)) {
+            throw const ApiException(
+              'No internet connection. Please check your network and try again.',
+            );
+          }
           await onUnauthorized?.call();
-          throw const ApiException('Session expired. Please login again.', statusCode: 401);
+          throw const ApiException(
+            'Session expired. Please login again.',
+            statusCode: 401,
+          );
         }
       }
 
@@ -101,14 +128,16 @@ class ApiClient {
         // Try to refresh the token
         final refreshToken = await _tokenStorage.getRefreshToken();
         if (refreshToken != null && refreshToken.isNotEmpty) {
-          final refreshResponse = await _http.post(
-            Uri.parse('${ApiConfig.baseUrl}/auth/refresh-jwt'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode({'refreshToken': refreshToken}),
-          );
+          final refreshResponse = await _http
+              .post(
+                Uri.parse('${ApiConfig.baseUrl}/auth/refresh-jwt'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+                body: jsonEncode({'refreshToken': refreshToken}),
+              )
+              .timeout(const Duration(seconds: 20));
 
           if (refreshResponse.statusCode == 200) {
             final refreshData = jsonDecode(refreshResponse.body);
@@ -146,9 +175,19 @@ class ApiClient {
           _refreshCompleter!.completeError(e);
         }
         _refreshCompleter = null;
-        // Refresh failed, trigger logout
+
+        if (_isConnectivityIssue(e)) {
+          throw const ApiException(
+            'No internet connection. Please check your network and try again.',
+          );
+        }
+
+        // Refresh failed due to auth/session reason, trigger logout.
         await onUnauthorized?.call();
-        throw const ApiException('Session expired. Please login again.', statusCode: 401);
+        throw const ApiException(
+          'Session expired. Please login again.',
+          statusCode: 401,
+        );
       }
     }
 
@@ -205,5 +244,23 @@ class ApiClient {
     }
 
     throw ApiException(message, statusCode: status);
+  }
+
+  bool _isConnectivityIssue(Object error) {
+    if (error is TimeoutException || error is SocketException) {
+      return true;
+    }
+
+    if (error is http.ClientException) {
+      return true;
+    }
+
+    final message = error.toString().toLowerCase();
+    return message.contains('socketexception') ||
+        message.contains('failed host lookup') ||
+        message.contains('connection refused') ||
+        message.contains('network is unreachable') ||
+        message.contains('timed out') ||
+        message.contains('timeout');
   }
 }

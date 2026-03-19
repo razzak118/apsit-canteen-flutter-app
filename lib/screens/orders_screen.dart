@@ -7,6 +7,7 @@ import '../models/order_user/order_ticket_dto.dart';
 import '../providers/order_profile_providers.dart';
 import '../providers/order_realtime_provider.dart';
 import '../providers/service_providers.dart';
+import '../utils/app_error_message.dart';
 import '../widgets/skeleton_box.dart';
 import 'order_detail_screen.dart';
 import '../widgets/glass_card.dart';
@@ -111,6 +112,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       ref.read(ordersPaginationProvider.notifier).loadMore();
+    }
+  }
+
+  Future<void> _waitUntilOrdersLoadingStarts() async {
+    for (var i = 0; i < 20; i++) {
+      final state = ref.read(ordersPaginationProvider);
+      if (state.isLoading) return;
+      await Future<void>.delayed(const Duration(milliseconds: 16));
     }
   }
 
@@ -336,9 +345,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         appBar: AppBar(title: const Text('My Orders')),
         body: RefreshIndicator(
           onRefresh: () async {
-            await _refreshQueueSummary();
-            await ref.read(ordersPaginationProvider.notifier).refresh();
-            await _refreshActiveOrderWaitTimes();
+            final refreshFuture = ref.read(ordersPaginationProvider.notifier).refresh();
+
+            unawaited(_refreshQueueSummary());
+            unawaited(
+              refreshFuture.then((_) => _refreshActiveOrderWaitTimes()),
+            );
+
+            await _waitUntilOrdersLoadingStarts();
+            await Future<void>.delayed(const Duration(milliseconds: 80));
           },
           child: _buildOrdersList(paginationState),
         ),
@@ -348,11 +363,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   Widget _buildOrdersList(OrdersPaginationState state) {
     if (!state.hasFetchedOnce) {
-      return ListView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [_OrdersSkeleton()],
-      );
+      return const _OrdersSkeleton();
     }
 
     if (!state.isLoading && state.orders.isNotEmpty) {
@@ -369,11 +380,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     }
 
     if (state.isLoading && state.orders.isEmpty) {
-      return ListView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [_OrdersSkeleton()],
-      );
+      return const _OrdersSkeleton();
     }
 
     if (state.error != null && state.orders.isEmpty) {
@@ -381,7 +388,27 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        children: [Text('Failed to load orders: ${state.error}')],
+        children: [
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Text(
+              appErrorMessage(
+                state.error!,
+                fallback: 'Unable to load your orders right now. Please try again.',
+              ),
+              style: const TextStyle(
+                color: Color(0xFF475569),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -588,6 +615,7 @@ class _OrdersSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         const SkeletonBox(height: 18, width: 90),

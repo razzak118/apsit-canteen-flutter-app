@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_session_provider.dart';
 import '../providers/order_profile_providers.dart';
+import '../utils/app_error_message.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/skeleton_box.dart';
 import 'change_password_screen.dart';
@@ -18,13 +21,36 @@ class ProfileScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: const Text('Profile')),
         body: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(myProfileProvider),
+          onRefresh: () async {
+            unawaited(ref.refresh(myProfileProvider.future));
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+          },
           child: profileAsync.when(
             skipLoadingOnRefresh: false,
             loading: () => const _ProfileSkeleton(),
             error: (error, _) => ListView(
               padding: const EdgeInsets.all(16),
-              children: [Text('Unable to load profile: $error')],
+              children: [
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Text(
+                    appErrorMessage(
+                      error,
+                      fallback: 'Unable to load profile right now. Please try again.',
+                    ),
+                    style: const TextStyle(
+                      color: Color(0xFF475569),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
             data: (profile) {
               return ListView(

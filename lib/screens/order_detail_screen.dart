@@ -12,6 +12,7 @@ import '../providers/order_profile_providers.dart';
 import '../providers/order_realtime_provider.dart';
 import '../providers/service_providers.dart';
 import '../providers/transaction_provider.dart';
+import '../utils/app_error_message.dart';
 import '../widgets/glass_card.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
@@ -213,7 +214,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to reorder: $e'),
+            content: Text(
+              appErrorMessage(
+                e,
+                fallback: 'Unable to reorder right now. Please try again.',
+              ),
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -283,7 +289,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to cancel order: $e'),
+            content: Text(
+              appErrorMessage(
+                e,
+                fallback: 'Unable to cancel order right now. Please try again.',
+              ),
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -369,7 +380,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Unable to load order details: ${snapshot.error}'),
+                Text(
+                  appErrorMessage(
+                    snapshot.error!,
+                    fallback: 'Unable to load order details right now. Please try again.',
+                  ),
+                ),
               ],
             );
           }

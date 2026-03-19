@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/cart_provider.dart';
 import '../providers/home_providers.dart';
+import '../utils/app_error_message.dart';
 import '../widgets/item_card.dart';
 import '../widgets/skeleton_box.dart';
 import 'item_detail_screen.dart';
@@ -347,8 +350,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(itemsPaginationProvider.notifier).refresh();
-          ref.invalidate(instantReadyItemsProvider);
+          unawaited(
+            Future<void>(() async {
+              await ref.read(itemsPaginationProvider.notifier).refresh();
+              ref.invalidate(instantReadyItemsProvider);
+            }),
+          );
+
+          await Future<void>.delayed(const Duration(milliseconds: 100));
         },
         child: Container(
           decoration: const BoxDecoration(
@@ -622,11 +631,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           color: const Color(0xFFFFE4E6),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Text(
-          'Unable to load items: ${state.error}',
-          style: const TextStyle(
-              color: Color(0xFF9F1239), fontWeight: FontWeight.w600),
-        ),
+         child: Text(
+           appErrorMessage(
+             state.error!,
+             fallback: 'Unable to load menu items right now. Please try again.',
+           ),
+           style: const TextStyle(
+               color: Color(0xFF9F1239), fontWeight: FontWeight.w600),
+         ),
       );
     }
 
