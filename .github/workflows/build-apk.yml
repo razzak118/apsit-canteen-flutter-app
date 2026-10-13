@@ -22,6 +22,29 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android .
 
+      - name: Add Android internet permission
+        shell: bash
+        run: |
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          import re
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          if not path.exists():
+              raise SystemExit(f"Android manifest not found: {path}")
+
+          text = path.read_text()
+          permission = '<uses-permission android:name="android.permission.INTERNET" />'
+          if 'android.permission.INTERNET' not in text:
+              match = re.search(r"(?m)^([ \t]*)<application\b", text)
+              if not match:
+                  raise SystemExit("Could not find <application> in AndroidManifest.xml")
+              indent = match.group(1)
+              text = text[:match.start()] + indent + permission + "\n" + text[match.start():]
+              path.write_text(text)
+          print("Android INTERNET permission is present")
+          PYCODE
+
       - name: Enable core library desugaring
         shell: bash
         run: |
