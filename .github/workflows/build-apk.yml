@@ -27,60 +27,47 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           kts = Path("android/app/build.gradle.kts")
           groovy = Path("android/app/build.gradle")
 
           if kts.exists():
               path = kts
-              text = path.read_text()
-
-              if "isCoreLibraryDesugaringEnabled" not in text:
-                  marker = "compileOptions {"
-                  if marker not in text:
-                      raise SystemExit("Could not find compileOptions block in build.gradle.kts")
-                  text = text.replace(
-                      marker,
-                      marker + "\n        isCoreLibraryDesugaringEnabled = true",
-                      1,
-                  )
-
-              if "coreLibraryDesugaring(" not in text:
-                  marker = "dependencies {"
-                  if marker not in text:
-                      raise SystemExit("Could not find dependencies block in build.gradle.kts")
-                  text = text.replace(
-                      marker,
-                      marker + '\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")',
-                      1,
-                  )
-
+              is_kotlin_dsl = True
+              enabled_line = "isCoreLibraryDesugaringEnabled = true"
+              dependency_line = 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
           elif groovy.exists():
               path = groovy
-              text = path.read_text()
-
-              if "coreLibraryDesugaringEnabled true" not in text:
-                  marker = "compileOptions {"
-                  if marker not in text:
-                      raise SystemExit("Could not find compileOptions block in build.gradle")
-                  text = text.replace(
-                      marker,
-                      marker + "\n        coreLibraryDesugaringEnabled true",
-                      1,
-                  )
-
-              if "coreLibraryDesugaring " not in text:
-                  marker = "dependencies {"
-                  if marker not in text:
-                      raise SystemExit("Could not find dependencies block in build.gradle")
-                  text = text.replace(
-                      marker,
-                      marker + "\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'",
-                      1,
-                  )
-
+              is_kotlin_dsl = False
+              enabled_line = "coreLibraryDesugaringEnabled true"
+              dependency_line = "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'"
           else:
               raise SystemExit("Android Gradle file was not generated")
+
+          text = path.read_text()
+
+          # Enable desugaring inside the app's compileOptions block.
+          if "isCoreLibraryDesugaringEnabled" not in text and "coreLibraryDesugaringEnabled" not in text:
+              match = re.search(r"(?m)^([ \t]*)compileOptions\s*\{", text)
+              if not match:
+                  raise SystemExit(f"Could not find compileOptions block in {path}")
+              indent = match.group(1) + "    "
+              text = text[:match.end()] + "\n" + indent + enabled_line + text[match.end():]
+
+          # Add the desugaring library to an existing dependencies block, or
+          # create a new top-level dependencies block if this template has none.
+          if "coreLibraryDesugaring" not in text:
+              match = re.search(r"(?m)^([ \t]*)dependencies\s*\{", text)
+              if match:
+                  indent = match.group(1) + "    "
+                  text = text[:match.end()] + "\n" + indent + dependency_line + text[match.end():]
+              else:
+                  if is_kotlin_dsl:
+                      new_block = f"\n\ndependencies {{\n    {dependency_line}\n}}\n"
+                  else:
+                      new_block = f"\n\ndependencies {{\n    {dependency_line}\n}}\n"
+                  text = text.rstrip() + new_block
 
           path.write_text(text)
           print(f"Enabled core library desugaring in {path}")
