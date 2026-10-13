@@ -1,4 +1,3 @@
-
 name: Build Flutter Android APK
 
 on:
@@ -22,6 +21,70 @@ jobs:
 
       - name: Generate Android project
         run: flutter create --platforms=android .
+
+      - name: Enable core library desugaring
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          kts = Path("android/app/build.gradle.kts")
+          groovy = Path("android/app/build.gradle")
+
+          if kts.exists():
+              path = kts
+              text = path.read_text()
+
+              if "isCoreLibraryDesugaringEnabled" not in text:
+                  marker = "compileOptions {"
+                  if marker not in text:
+                      raise SystemExit("Could not find compileOptions block in build.gradle.kts")
+                  text = text.replace(
+                      marker,
+                      marker + "\n        isCoreLibraryDesugaringEnabled = true",
+                      1,
+                  )
+
+              if "coreLibraryDesugaring(" not in text:
+                  marker = "dependencies {"
+                  if marker not in text:
+                      raise SystemExit("Could not find dependencies block in build.gradle.kts")
+                  text = text.replace(
+                      marker,
+                      marker + '\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")',
+                      1,
+                  )
+
+          elif groovy.exists():
+              path = groovy
+              text = path.read_text()
+
+              if "coreLibraryDesugaringEnabled true" not in text:
+                  marker = "compileOptions {"
+                  if marker not in text:
+                      raise SystemExit("Could not find compileOptions block in build.gradle")
+                  text = text.replace(
+                      marker,
+                      marker + "\n        coreLibraryDesugaringEnabled true",
+                      1,
+                  )
+
+              if "coreLibraryDesugaring " not in text:
+                  marker = "dependencies {"
+                  if marker not in text:
+                      raise SystemExit("Could not find dependencies block in build.gradle")
+                  text = text.replace(
+                      marker,
+                      marker + "\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'",
+                      1,
+                  )
+
+          else:
+              raise SystemExit("Android Gradle file was not generated")
+
+          path.write_text(text)
+          print(f"Enabled core library desugaring in {path}")
+          PY
 
       - name: Install dependencies
         run: flutter pub get
